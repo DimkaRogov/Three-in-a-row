@@ -1,0 +1,12 @@
+cabal-version:      2.4
+name:               tree-in-a-row
+version:            0.1.0.0
+build-type:         Simple
+
+executable tree-in-a-row
+  main-is:          main.hs
+  hs-source-dirs:   .
+  default-language: Haskell2010
+  build-depends:
+      base >=4.18 && <5,
+      random
