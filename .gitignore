@@ -1,0 +1,11 @@
+dist-newstyle/
+
+# GHC/Cabal build artifacts
+*.hi
+*.hie
+*.o
+*.dyn_hi
+*.dyn_o
+
+# Executables
+*.exe
