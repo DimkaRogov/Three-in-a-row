@@ -1,0 +1,121 @@
+/* Сброс отступов и единая модель размеров */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* Тёмный фон страницы, читаемый шрифт */
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  background: linear-gradient(160deg, #1a1f2e 0%, #0f1419 50%, #151b26 100%);
+  color: #e8ecf4;
+}
+
+/* Центральная колонка: заголовок, счёт, поле, подсказка */
+.page {
+  width: 100%;
+  max-width: min(92vw, 420px);
+  text-align: center;
+}
+
+/* Заголовок игры */
+.title {
+  margin: 0 0 0.35rem;
+  font-size: clamp(1.35rem, 5vw, 1.75rem);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: #f0f4fc;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.35);
+}
+
+/* Панель счёта */
+.score {
+  margin: 0 0 1.25rem;
+  font-size: clamp(1rem, 3.5vw, 1.2rem);
+  font-weight: 600;
+  color: #c5d0e6;
+  letter-spacing: 0.02em;
+}
+
+/*
+  Игровое поле: сетка 6×6.
+  --cell-size подстраивается под ширину экрана, чтобы поле не вылезало за края.
+*/
+.board {
+  --gap: 8px;
+  --cell-size: 60px;
+
+  display: grid;
+  grid-template-columns: repeat(6, var(--cell-size));
+  grid-template-rows: repeat(6, var(--cell-size));
+  gap: var(--gap);
+  justify-content: center;
+  margin: 0 auto;
+  padding: 18px;
+  background: linear-gradient(145deg, #252d3d 0%, #1c2330 100%);
+  border-radius: 16px;
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+/* Клетка: квадрат, флекс для центрирования «фишки» */
+.cell {
+  position: relative;
+  width: var(--cell-size);
+  height: var(--cell-size);
+  border-radius: 12px;
+  background: rgba(30, 38, 52, 0.85);
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Круг-фишка через псевдоэлемент */
+.cell::before {
+  content: "";
+  display: block;
+  width: 62%;
+  height: 62%;
+  border-radius: 50%;
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.4),
+    inset 0 -2px 6px rgba(0, 0, 0, 0.15),
+    inset 0 2px 6px rgba(255, 255, 255, 0.25);
+}
+
+/* Тип 1 — красный круг */
+.cell-1::before {
+  background: radial-gradient(circle at 35% 30%, #ff8a8a 0%, #e63946 45%, #b71c2c 100%);
+}
+
+/* Тип 2 — синий круг */
+.cell-2::before {
+  background: radial-gradient(circle at 35% 30%, #8ec5ff 0%, #3a86ff 45%, #1d4ed8 100%);
+}
+
+/* Тип 3 — жёлтый круг */
+.cell-3::before {
+  background: radial-gradient(circle at 35% 30%, #fff3a0 0%, #ffd60a 45%, #e6a800 100%);
+}
+
+/* Подсказка под полем */
+.hint {
+  margin: 1.25rem 0 0;
+  font-size: clamp(0.85rem, 3vw, 0.95rem);
+  line-height: 1.45;
+  color: #9aa8c4;
+  max-width: 28em;
+  margin-left: auto;
+  margin-right: auto;
+}
