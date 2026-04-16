@@ -30,11 +30,15 @@ generateBoard = do
 -- вывод поля с номерами строк и столбцов
 printBoard :: Board -> IO ()
 printBoard board = do
-    putStrLn $ "  " ++ unwords (map show [1..boardSize])
+    putStrLn $ "    | " ++ unwords (map show [1..boardSize])
+    putStrLn $ "----+" ++ replicate (2 * boardSize) '-'
     mapM_ printRow (zip [1..] board)
     putStrLn ""
   where
-    printRow (i, row) = putStrLn $ show i ++ " " ++ unwords (map show row)
+    printRow (i, row) = putStrLn $ padRowIndex i ++ " | " ++ unwords (map show row)
+    padRowIndex n
+        | n < 10 = ' ' : show n
+        | otherwise = show n
 
 -- проверяем что два элемента стоят рядом
 isAdjacent :: (Int, Int) -> (Int, Int) -> Bool
@@ -167,7 +171,7 @@ gameLoop score board = do
         else do
             putStrLn $ "Счёт: " ++ show score
             putStrLn "Введите координаты (строка1 столбец1 строка2 столбец2)"
-            putStrLn "Например: 1 2 1 3 — или 'q' для выхода"
+            putStrLn "Например: 1 2 1 3 - или 'q' для выхода"
             input <- getLine
             case input of
                 "q" -> do
@@ -190,7 +194,7 @@ handleMove score board (r1, c1, r2, c2) =
         Just newBoard ->
             if not (hasAnyTriples newBoard)
                 then do
-                    putStrLn "Этот обмен не даёт троек — ход не засчитан!"
+                    putStrLn "Этот обмен не даёт троек - ход не засчитан!"
                     gameLoop score board
                 else do
                     putStrLn "Обмен выполнен!"
