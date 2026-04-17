@@ -1,4 +1,5 @@
 dist-newstyle/
+node_modules/
 
 # GHC/Cabal build artifacts
 *.hi
