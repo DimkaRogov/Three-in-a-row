@@ -1,149 +1,225 @@
 document.addEventListener('DOMContentLoaded', () => {
+  // --- Константы ---
+  const BOARD_SIZE = 6;
+  const MATCH_ANIMATION_MS = 400;
+
   // --- Состояние игры ---
-  // переменные: счёт, выбранная клетка, блокировка поля во время анимации
+  // board хранит текущее состояние поля, score — очки, selectedCell — выбранная DOM-клетка
+  let board = [];
   let score = 0;
   let selectedCell = null;
   let boardLocked = false;
 
-  const board = document.querySelector('.board');
+  const boardEl = document.querySelector('.board');
   const scoreEl = document.querySelector('.score');
+  const allCells = Array.from(boardEl.querySelectorAll('.cell'));
 
-  // сетка 6×6: cells[row][col] — DOM-элемент клетки
-  const cells = [];
-  const allCells = Array.from(board.querySelectorAll('.cell'));
-  for (let r = 0; r < 6; r++) {
-    cells[r] = allCells.slice(r * 6, r * 6 + 6);
-  }
+  // Быстрый доступ к DOM-клетке по координатам
+  const cells = Array.from({ length: BOARD_SIZE }, () => Array(BOARD_SIZE));
+  allCells.forEach((cell) => {
+    const row = Number(cell.getAttribute('data-row'));
+    const col = Number(cell.getAttribute('data-col'));
+    cells[row][col] = cell;
+  });
 
-  // --- Вспомогательные функции ---
-  // getType, setType, isAdjacent, getRow, getCol
-
-  /** Тип фишки 1/2/3 по классу cell-1…cell-3 */
-  function getType(cell) {
-    if (cell.classList.contains('cell-1')) return 1;
-    if (cell.classList.contains('cell-2')) return 2;
-    if (cell.classList.contains('cell-3')) return 3;
-    return null;
-  }
-
-  /** Поставить тип фишки только через классы (без innerHTML) */
-  function setType(cell, type) {
-    cell.classList.remove('cell-1', 'cell-2', 'cell-3');
-    cell.classList.add('cell-' + type);
-  }
-
-  /** Случайный тип 1…3 */
-  function randomType() {
+  // --- Генерация поля (как в Haskell) ---
+  function generateElement() {
     return Math.floor(Math.random() * 3) + 1;
   }
 
-  /** Соседи только по стороне света (не по диагонали) */
-  function isAdjacent(cell1, cell2) {
-    const dr = Math.abs(getRow(cell1) - getRow(cell2));
-    const dc = Math.abs(getCol(cell1) - getCol(cell2));
-    return dr + dc === 1;
-  }
+  function generateBoard() {
+    while (true) {
+      const newBoard = Array.from({ length: BOARD_SIZE }, () =>
+        Array.from({ length: BOARD_SIZE }, () => generateElement())
+      );
 
-  function getRow(cell) {
-    return Number(cell.getAttribute('data-row'));
-  }
-
-  function getCol(cell) {
-    return Number(cell.getAttribute('data-col'));
-  }
-
-  function clearSelection() {
-    if (selectedCell) {
-      selectedCell.classList.remove('selected');
-      selectedCell = null;
+      if (findAllTriples(newBoard).length === 0) {
+        return newBoard;
+      }
     }
   }
 
-  // --- Логика игры ---
-  // findMatches, removeMatches, updateScore
+  // --- Поиск троек (как в Haskell) ---
+  function findHorizontalTriples(currentBoard) {
+    const triples = [];
 
-  /** Все клетки в линиях из 3+ одинаковых (ряд и столбец) */
-  function findMatches() {
-    const matched = new Set();
+    for (let row = 0; row < BOARD_SIZE; row++) {
+      for (let col = 0; col <= BOARD_SIZE - 3; col++) {
+        const a = currentBoard[row][col];
+        const b = currentBoard[row][col + 1];
+        const c = currentBoard[row][col + 2];
 
-    // Горизонтали
-    for (let r = 0; r < 6; r++) {
-      let c = 0;
-      while (c < 6) {
-        const type = getType(cells[r][c]);
-        const start = c;
-        c++;
-        while (c < 6 && getType(cells[r][c]) === type) {
-          c++;
-        }
-        if (type != null && c - start >= 3) {
-          for (let k = start; k < c; k++) {
-            matched.add(cells[r][k]);
-          }
+        if (a === b && b === c) {
+          triples.push({ row, colStart: col, colEnd: col + 2 });
         }
       }
     }
 
-    // Вертикали
-    for (let col = 0; col < 6; col++) {
-      let r = 0;
-      while (r < 6) {
-        const type = getType(cells[r][col]);
-        const start = r;
-        r++;
-        while (r < 6 && getType(cells[r][col]) === type) {
-          r++;
-        }
-        if (type != null && r - start >= 3) {
-          for (let k = start; k < r; k++) {
-            matched.add(cells[k][col]);
-          }
+    return triples;
+  }
+
+  function findVerticalTriples(currentBoard) {
+    const triples = [];
+
+    for (let col = 0; col < BOARD_SIZE; col++) {
+      for (let row = 0; row <= BOARD_SIZE - 3; row++) {
+        const a = currentBoard[row][col];
+        const b = currentBoard[row + 1][col];
+        const c = currentBoard[row + 2][col];
+
+        if (a === b && b === c) {
+          triples.push({ rowStart: row, rowEnd: row + 2, col });
         }
       }
     }
 
-    return Array.from(matched);
+    return triples;
   }
 
-  /**
-   * Класс matched → пауза 400 мс → случайные новые типы и очки;
-   * если снова есть тройки — повторить.
-   */
-  function removeMatches(cellsToRemove) {
-    boardLocked = true;
-    const unique = Array.from(new Set(cellsToRemove));
+  function findAllTriples(currentBoard) {
+    return [...findHorizontalTriples(currentBoard), ...findVerticalTriples(currentBoard)];
+  }
 
-    unique.forEach((cell) => {
-      cell.classList.add('matched');
+  function collectCellsToRemove(currentBoard) {
+    const unique = new Set();
+    const cellsToRemove = [];
+
+    const horizontals = findHorizontalTriples(currentBoard);
+    const verticals = findVerticalTriples(currentBoard);
+
+    horizontals.forEach((triple) => {
+      for (let col = triple.colStart; col <= triple.colEnd; col++) {
+        const key = `${triple.row}:${col}`;
+        if (!unique.has(key)) {
+          unique.add(key);
+          cellsToRemove.push({ row: triple.row, col });
+        }
+      }
     });
 
-    window.setTimeout(() => {
-      unique.forEach((cell) => {
-        cell.classList.remove('matched');
-        setType(cell, randomType());
+    verticals.forEach((triple) => {
+      for (let row = triple.rowStart; row <= triple.rowEnd; row++) {
+        const key = `${row}:${triple.col}`;
+        if (!unique.has(key)) {
+          unique.add(key);
+          cellsToRemove.push({ row, col: triple.col });
+        }
+      }
+    });
+
+    return cellsToRemove;
+  }
+
+  // --- Логика игры (как в Haskell) ---
+  function calculateScore(currentBoard) {
+    return collectCellsToRemove(currentBoard).length * 10;
+  }
+
+  function removeAllTriples(currentBoard) {
+    const nextBoard = currentBoard.map((row) => [...row]);
+    const cellsToRemove = collectCellsToRemove(nextBoard);
+
+    cellsToRemove.forEach(({ row, col }) => {
+      nextBoard[row][col] = 0;
+    });
+
+    return nextBoard;
+  }
+
+  function addNewElements(currentBoard) {
+    const emptyCells = [];
+
+    for (let row = 0; row < BOARD_SIZE; row++) {
+      for (let col = 0; col < BOARD_SIZE; col++) {
+        if (currentBoard[row][col] === 0) {
+          emptyCells.push({ row, col });
+        }
+      }
+    }
+
+    if (emptyCells.length === 0) {
+      return currentBoard.map((row) => [...row]);
+    }
+
+    while (true) {
+      const nextBoard = currentBoard.map((row) => [...row]);
+
+      emptyCells.forEach(({ row, col }) => {
+        nextBoard[row][col] = generateElement();
       });
 
-      updateScore(unique.length * 10);
-
-      const next = findMatches();
-      if (next.length > 0) {
-        removeMatches(next);
-      } else {
-        boardLocked = false;
+      if (findAllTriples(nextBoard).length === 0) {
+        return nextBoard;
       }
-    }, 400);
+    }
   }
 
-  /** Добавить очки и перерисовать строку «Счёт: …» */
+  // --- Синхронизация с HTML ---
+  function renderBoard(currentBoard) {
+    for (let row = 0; row < BOARD_SIZE; row++) {
+      for (let col = 0; col < BOARD_SIZE; col++) {
+        const cell = cells[row][col];
+        const value = currentBoard[row][col];
+        cell.classList.remove('cell-1', 'cell-2', 'cell-3', 'selected');
+        if (value >= 1 && value <= 3) {
+          cell.classList.add(`cell-${value}`);
+        }
+      }
+    }
+  }
+
   function updateScore(points) {
     score += points;
-    scoreEl.textContent = 'Счёт: ' + score;
+    scoreEl.textContent = `Счёт: ${score}`;
   }
 
-  // --- Обработчик кликов ---
-  // handleClick — выбор, обмен соседей, при наличии троек — removeMatches
+  function sleep(ms) {
+    return new Promise((resolve) => {
+      window.setTimeout(resolve, ms);
+    });
+  }
 
-  /** Первый клик — выделение; второй — обмен или сброс выделения */
+  function markMatchedCells(cellsToRemove) {
+    cellsToRemove.forEach(({ row, col }) => {
+      cells[row][col].classList.add('matched');
+    });
+  }
+
+  function clearMatchedCells(cellsToRemove) {
+    cellsToRemove.forEach(({ row, col }) => {
+      cells[row][col].classList.remove('matched');
+    });
+  }
+
+  async function processBoardAfterMove() {
+    boardLocked = true;
+
+    while (findAllTriples(board).length > 0) {
+      const cellsToRemove = collectCellsToRemove(board);
+      markMatchedCells(cellsToRemove);
+      await sleep(MATCH_ANIMATION_MS);
+      clearMatchedCells(cellsToRemove);
+
+      const gained = calculateScore(board);
+      updateScore(gained);
+      board = removeAllTriples(board);
+      board = addNewElements(board);
+
+      renderBoard(board);
+    }
+
+    boardLocked = false;
+  }
+
+  // --- Обработка кликов ---
+  function isAdjacent(cell1, cell2) {
+    const row1 = Number(cell1.getAttribute('data-row'));
+    const col1 = Number(cell1.getAttribute('data-col'));
+    const row2 = Number(cell2.getAttribute('data-row'));
+    const col2 = Number(cell2.getAttribute('data-col'));
+    return Math.abs(row1 - row2) + Math.abs(col1 - col2) === 1;
+  }
+
   function handleClick(cell) {
     if (boardLocked) {
       return;
@@ -156,7 +232,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (selectedCell === cell) {
-      clearSelection();
+      selectedCell.classList.remove('selected');
+      selectedCell = null;
       return;
     }
 
@@ -164,28 +241,36 @@ document.addEventListener('DOMContentLoaded', () => {
     const second = cell;
 
     if (!isAdjacent(first, second)) {
-      clearSelection();
+      first.classList.remove('selected');
+      selectedCell = null;
       return;
     }
 
-    const typeA = getType(first);
-    const typeB = getType(second);
-    setType(first, typeB);
-    setType(second, typeA);
+    const row1 = Number(first.getAttribute('data-row'));
+    const col1 = Number(first.getAttribute('data-col'));
+    const row2 = Number(second.getAttribute('data-row'));
+    const col2 = Number(second.getAttribute('data-col'));
 
-    clearSelection();
+    // Вариант Б: обмен соседних фишек всегда выполняется
+    const temp = board[row1][col1];
+    board[row1][col1] = board[row2][col2];
+    board[row2][col2] = temp;
 
-    const matches = findMatches();
-    if (matches.length > 0) {
-      removeMatches(matches);
-    }
+    first.classList.remove('selected');
+    selectedCell = null;
+
+    renderBoard(board);
+    processBoardAfterMove();
   }
+
+  // Инициализация игры: генерируем поле без троек и рисуем его
+  board = generateBoard();
+  renderBoard(board);
+  updateScore(0);
 
   // навесить handleClick на каждую клетку
   allCells.forEach((cell) => {
-    cell.addEventListener('click', () => {
-      handleClick(cell);
-    });
+    cell.addEventListener('click', () => handleClick(cell));
   });
 });
 
