@@ -109,6 +109,24 @@ body {
   background: radial-gradient(circle at 35% 30%, #fff3a0 0%, #ffd60a 45%, #e6a800 100%);
 }
 
+/* Выбранная фишка */
+.selected {
+  outline: 3px solid white;
+  outline-offset: -3px;
+  transform: scale(1.1);
+}
+
+/* Совпавшие фишки перед заменой */
+.matched {
+  animation: explode 0.4s ease-out forwards;
+}
+
+@keyframes explode {
+  0%   { transform: scale(1);   opacity: 1; }
+  50%  { transform: scale(1.4); opacity: 0.6; }
+  100% { transform: scale(0);   opacity: 0; }
+}
+
 /* Подсказка под полем */
 .hint {
   margin: 1.25rem 0 0;
