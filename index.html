@@ -7,15 +7,15 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <!-- Основной контейнер: центрирует всё на странице -->
+  <!-- Поле по центру экрана; правила — справа от поля (см. .stage) -->
   <main class="page">
     <h1 class="title">ТРИ В РЯД</h1>
 
-    <!-- Панель счёта (позже можно обновлять через JS) -->
     <p class="score">Счёт: 0</p>
 
-    <!-- Игровое поле 6×6: сетка из клеток -->
-    <div class="board" role="grid" aria-label="Игровое поле 6 на 6">
+    <div class="stage">
+      <!-- Игровое поле 6×6: сетка из клеток -->
+      <div class="board" role="grid" aria-label="Игровое поле 6 на 6">
       <!-- Ряд 0 -->
       <div class="cell cell-1" data-row="0" data-col="0"></div>
       <div class="cell cell-2" data-row="0" data-col="1"></div>
@@ -63,9 +63,31 @@
       <div class="cell cell-3" data-row="5" data-col="3"></div>
       <div class="cell cell-1" data-row="5" data-col="4"></div>
       <div class="cell cell-2" data-row="5" data-col="5"></div>
+      </div>
+
+      <aside class="score-rules" aria-labelledby="score-rules-heading">
+        <h2 id="score-rules-heading" class="score-rules__title">Как начисляются очки</h2>
+        <ul class="score-rules__list">
+          <li>
+            За каждую фишку в линии из <strong>трёх и более</strong> одинаковых подряд
+            (по строке или по столбцу) даётся <strong>10 очков</strong>.
+          </li>
+          <li>
+            Если в линии четыре фишки и больше, считаются все они:
+            например, четыре подряд — это 40 очков за один такой сброс.
+          </li>
+          <li>
+            Когда фишки падают и снова складывается линия, она тоже приносит очки —
+            за один ваш ход суммируются все такие сбросы подряд.
+          </li>
+          <li>
+            Счёт показывает накопленную сумму за текущую партию; при новой загрузке
+            поля с сервера он начинается с нуля.
+          </li>
+        </ul>
+      </aside>
     </div>
 
-    <!-- Подсказка для игрока -->
     <p class="hint">
       Кликните на фишку, затем на соседнюю чтобы поменять их местами
     </p>
