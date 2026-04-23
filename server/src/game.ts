@@ -1,4 +1,4 @@
-import { Board, Cell } from "./types"
+import type { Board, Cell } from "./types"
 
 const ROWS = 6
 const COLS = 6
@@ -8,12 +8,12 @@ const EMPTY = 0
 type InternalCell = Cell | 0
 type InternalBoard = InternalCell[][]
 
-export interface Position {
+interface Position {
   row: number
   col: number
 }
 
-export interface Triple {
+interface Triple {
   cells: Position[]
 }
 
@@ -24,28 +24,35 @@ const toInternal = (board: Board): InternalBoard =>
 
 const toBoard = (board: InternalBoard): Board => board as unknown as Board
 
-export function generateElement(): Cell {
+function generateElement(): Cell {
   const index = Math.floor(Math.random() * CELL_TYPES.length)
-  return CELL_TYPES[index]
+  const picked = CELL_TYPES[index]
+  if (picked === undefined) {
+    throw new Error("CELL_TYPES index out of range")
+  }
+  return picked
 }
 
-export function generateBoard(): Board {
+function generateBoard(): Board {
   const board: Board = Array.from({ length: ROWS }, () =>
     Array.from({ length: COLS }, () => generateElement())
   )
 
-  // Avoid initial triples so the board starts in a stable state.
   for (let row = 0; row < ROWS; row += 1) {
     for (let col = 0; col < COLS; col += 1) {
+      const rowCells = board[row]
+      if (rowCells === undefined) {
+        continue
+      }
       while (
         (col >= 2 &&
-          board[row][col] === board[row][col - 1] &&
-          board[row][col] === board[row][col - 2]) ||
+          rowCells[col] === rowCells[col - 1] &&
+          rowCells[col] === rowCells[col - 2]) ||
         (row >= 2 &&
-          board[row][col] === board[row - 1][col] &&
-          board[row][col] === board[row - 2][col])
+          rowCells[col] === board[row - 1]?.[col] &&
+          rowCells[col] === board[row - 2]?.[col])
       ) {
-        board[row][col] = generateElement()
+        rowCells[col] = generateElement()
       }
     }
   }
@@ -53,42 +60,53 @@ export function generateBoard(): Board {
   return board
 }
 
-export function isAdjacent(r1: number, c1: number, r2: number, c2: number): boolean {
+function isAdjacent(r1: number, c1: number, r2: number, c2: number): boolean {
   const rowDiff = Math.abs(r1 - r2)
   const colDiff = Math.abs(c1 - c2)
   return rowDiff + colDiff === 1
 }
 
-export function swapCells(
-  board: Board,
-  r1: number,
-  c1: number,
-  r2: number,
-  c2: number
-): Board {
+function swapCells(board: Board, r1: number, c1: number, r2: number, c2: number): Board {
   const nextBoard = cloneBoard(board)
 
   if (!isAdjacent(r1, c1, r2, c2)) {
     return nextBoard
   }
 
-  ;[nextBoard[r1][c1], nextBoard[r2][c2]] = [nextBoard[r2][c2], nextBoard[r1][c1]]
+  const rowA = nextBoard[r1]
+  const rowB = nextBoard[r2]
+  if (rowA === undefined || rowB === undefined) {
+    return nextBoard
+  }
+
+  const cellA = rowA[c1]
+  const cellB = rowB[c2]
+  if (cellA === undefined || cellB === undefined) {
+    return nextBoard
+  }
+
+  rowA[c1] = cellB
+  rowB[c2] = cellA
   return nextBoard
 }
 
-export function findHorizontalTriples(board: Board): Triple[] {
+function findHorizontalTriples(board: Board): Triple[] {
   const triples: Triple[] = []
 
   for (let row = 0; row < board.length; row += 1) {
+    const rowCells = board[row]
+    if (rowCells === undefined) {
+      continue
+    }
     let col = 0
-    while (col < board[row].length) {
-      const value = board[row][col]
+    while (col < rowCells.length) {
+      const value = rowCells[col]
       let end = col + 1
-      while (end < board[row].length && board[row][end] === value) {
+      while (end < rowCells.length && rowCells[end] === value) {
         end += 1
       }
 
-      if (end - col >= 3) {
+      if (value !== undefined && end - col >= 3) {
         triples.push({
           cells: Array.from({ length: end - col }, (_, i) => ({ row, col: col + i })),
         })
@@ -101,7 +119,7 @@ export function findHorizontalTriples(board: Board): Triple[] {
   return triples
 }
 
-export function findVerticalTriples(board: Board): Triple[] {
+function findVerticalTriples(board: Board): Triple[] {
   const triples: Triple[] = []
   const rows = board.length
   const cols = board[0]?.length ?? 0
@@ -109,13 +127,13 @@ export function findVerticalTriples(board: Board): Triple[] {
   for (let col = 0; col < cols; col += 1) {
     let row = 0
     while (row < rows) {
-      const value = board[row][col]
+      const value = board[row]?.[col]
       let end = row + 1
-      while (end < rows && board[end][col] === value) {
+      while (end < rows && board[end]?.[col] === value) {
         end += 1
       }
 
-      if (end - row >= 3) {
+      if (value !== undefined && end - row >= 3) {
         triples.push({
           cells: Array.from({ length: end - row }, (_, i) => ({ row: row + i, col })),
         })
@@ -128,11 +146,11 @@ export function findVerticalTriples(board: Board): Triple[] {
   return triples
 }
 
-export function findAllTriples(board: Board): Triple[] {
+function findAllTriples(board: Board): Triple[] {
   return [...findHorizontalTriples(board), ...findVerticalTriples(board)]
 }
 
-export function collectCellsToRemove(board: Board): Position[] {
+function collectCellsToRemove(board: Board): Position[] {
   const triples = findAllTriples(board)
   const unique = new Set<string>()
   const cells: Position[] = []
@@ -150,7 +168,7 @@ export function collectCellsToRemove(board: Board): Position[] {
   return cells
 }
 
-export function removeAllTriples(board: Board): Board {
+function removeAllTriples(board: Board): Board {
   const internalBoard = toInternal(board)
   const cellsToRemove = collectCellsToRemove(board)
 
@@ -159,7 +177,11 @@ export function removeAllTriples(board: Board): Board {
   }
 
   for (const { row, col } of cellsToRemove) {
-    internalBoard[row][col] = EMPTY
+    const rowCells = internalBoard[row]
+    if (rowCells === undefined) {
+      continue
+    }
+    rowCells[col] = EMPTY
   }
 
   const rows = internalBoard.length
@@ -169,28 +191,24 @@ export function removeAllTriples(board: Board): Board {
     let writeRow = rows - 1
 
     for (let row = rows - 1; row >= 0; row -= 1) {
-      const value = internalBoard[row][col]
-      if (value !== EMPTY) {
-        internalBoard[writeRow][col] = value
+      const rowCells = internalBoard[row]
+      if (rowCells === undefined) {
+        continue
+      }
+      const value = rowCells[col]
+      if (value !== EMPTY && value !== undefined) {
+        const targetRow = internalBoard[writeRow]
+        if (targetRow !== undefined) {
+          targetRow[col] = value
+        }
         writeRow -= 1
       }
     }
 
     for (let row = writeRow; row >= 0; row -= 1) {
-      internalBoard[row][col] = EMPTY
-    }
-  }
-
-  return toBoard(internalBoard)
-}
-
-export function addNewElements(board: Board): Board {
-  const internalBoard = toInternal(board)
-
-  for (let row = 0; row < internalBoard.length; row += 1) {
-    for (let col = 0; col < (internalBoard[row]?.length ?? 0); col += 1) {
-      if (internalBoard[row][col] === EMPTY) {
-        internalBoard[row][col] = generateElement()
+      const targetRow = internalBoard[row]
+      if (targetRow !== undefined) {
+        targetRow[col] = EMPTY
       }
     }
   }
@@ -198,7 +216,40 @@ export function addNewElements(board: Board): Board {
   return toBoard(internalBoard)
 }
 
-export function calculateScore(board: Board): number {
+function addNewElements(board: Board): Board {
+  const internalBoard = toInternal(board)
+
+  for (let row = 0; row < internalBoard.length; row += 1) {
+    const rowCells = internalBoard[row]
+    if (rowCells === undefined) {
+      continue
+    }
+    for (let col = 0; col < rowCells.length; col += 1) {
+      if (rowCells[col] === EMPTY) {
+        rowCells[col] = generateElement()
+      }
+    }
+  }
+
+  return toBoard(internalBoard)
+}
+
+function calculateScore(board: Board): number {
   const removedCellsCount = collectCellsToRemove(board).length
   return removedCellsCount * 10
+}
+
+export = {
+  cloneBoard,
+  generateElement,
+  generateBoard,
+  isAdjacent,
+  swapCells,
+  findHorizontalTriples,
+  findVerticalTriples,
+  findAllTriples,
+  collectCellsToRemove,
+  removeAllTriples,
+  addNewElements,
+  calculateScore,
 }

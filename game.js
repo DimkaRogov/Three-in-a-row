@@ -1,10 +1,13 @@
 document.addEventListener('DOMContentLoaded', () => {
-  // --- Константы ---
   const BOARD_SIZE = 6;
-  const MATCH_ANIMATION_MS = 400;
+  const API_BASE = 'http://localhost:3000';
 
-  // --- Состояние игры ---
-  // board хранит текущее состояние поля, score — очки, selectedCell — выбранная DOM-клетка
+  const SWAP_PAUSE_MS = 200;
+  const MATCH_CLEAR_MS = 540;
+  const LAND_MS = 320;
+
+  const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
   let board = [];
   let score = 0;
   let selectedCell = null;
@@ -14,7 +17,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const scoreEl = document.querySelector('.score');
   const allCells = Array.from(boardEl.querySelectorAll('.cell'));
 
-  // Быстрый доступ к DOM-клетке по координатам
   const cells = Array.from({ length: BOARD_SIZE }, () => Array(BOARD_SIZE));
   allCells.forEach((cell) => {
     const row = Number(cell.getAttribute('data-row'));
@@ -22,196 +24,90 @@ document.addEventListener('DOMContentLoaded', () => {
     cells[row][col] = cell;
   });
 
-  // --- Генерация поля (как в Haskell) ---
-  function generateElement() {
-    return Math.floor(Math.random() * 3) + 1;
-  }
-
-  function generateBoard() {
-    while (true) {
-      const newBoard = Array.from({ length: BOARD_SIZE }, () =>
-        Array.from({ length: BOARD_SIZE }, () => generateElement())
-      );
-
-      if (findAllTriples(newBoard).length === 0) {
-        return newBoard;
-      }
-    }
-  }
-
-  // --- Поиск троек (как в Haskell) ---
-  function findHorizontalTriples(currentBoard) {
-    const triples = [];
-
-    for (let row = 0; row < BOARD_SIZE; row++) {
-      for (let col = 0; col <= BOARD_SIZE - 3; col++) {
-        const a = currentBoard[row][col];
-        const b = currentBoard[row][col + 1];
-        const c = currentBoard[row][col + 2];
-
-        if (a === b && b === c) {
-          triples.push({ row, colStart: col, colEnd: col + 2 });
-        }
-      }
-    }
-
-    return triples;
-  }
-
-  function findVerticalTriples(currentBoard) {
-    const triples = [];
-
-    for (let col = 0; col < BOARD_SIZE; col++) {
-      for (let row = 0; row <= BOARD_SIZE - 3; row++) {
-        const a = currentBoard[row][col];
-        const b = currentBoard[row + 1][col];
-        const c = currentBoard[row + 2][col];
-
-        if (a === b && b === c) {
-          triples.push({ rowStart: row, rowEnd: row + 2, col });
-        }
-      }
-    }
-
-    return triples;
-  }
-
-  function findAllTriples(currentBoard) {
-    return [...findHorizontalTriples(currentBoard), ...findVerticalTriples(currentBoard)];
-  }
-
-  function collectCellsToRemove(currentBoard) {
-    const unique = new Set();
-    const cellsToRemove = [];
-
-    const horizontals = findHorizontalTriples(currentBoard);
-    const verticals = findVerticalTriples(currentBoard);
-
-    horizontals.forEach((triple) => {
-      for (let col = triple.colStart; col <= triple.colEnd; col++) {
-        const key = `${triple.row}:${col}`;
-        if (!unique.has(key)) {
-          unique.add(key);
-          cellsToRemove.push({ row: triple.row, col });
-        }
-      }
-    });
-
-    verticals.forEach((triple) => {
-      for (let row = triple.rowStart; row <= triple.rowEnd; row++) {
-        const key = `${row}:${triple.col}`;
-        if (!unique.has(key)) {
-          unique.add(key);
-          cellsToRemove.push({ row, col: triple.col });
-        }
-      }
-    });
-
-    return cellsToRemove;
-  }
-
-  // --- Логика игры (как в Haskell) ---
-  function calculateScore(currentBoard) {
-    return collectCellsToRemove(currentBoard).length * 10;
-  }
-
-  function removeAllTriples(currentBoard) {
-    const nextBoard = currentBoard.map((row) => [...row]);
-    const cellsToRemove = collectCellsToRemove(nextBoard);
-
-    cellsToRemove.forEach(({ row, col }) => {
-      nextBoard[row][col] = 0;
-    });
-
-    return nextBoard;
-  }
-
-  function addNewElements(currentBoard) {
-    const emptyCells = [];
-
-    for (let row = 0; row < BOARD_SIZE; row++) {
-      for (let col = 0; col < BOARD_SIZE; col++) {
-        if (currentBoard[row][col] === 0) {
-          emptyCells.push({ row, col });
-        }
-      }
-    }
-
-    if (emptyCells.length === 0) {
-      return currentBoard.map((row) => [...row]);
-    }
-
-    while (true) {
-      const nextBoard = currentBoard.map((row) => [...row]);
-
-      emptyCells.forEach(({ row, col }) => {
-        nextBoard[row][col] = generateElement();
-      });
-
-      if (findAllTriples(nextBoard).length === 0) {
-        return nextBoard;
-      }
-    }
-  }
-
-  // --- Синхронизация с HTML ---
-  function renderBoard(currentBoard) {
+  function renderBoard(currentBoard, options = {}) {
+    const { landing = false } = options;
     for (let row = 0; row < BOARD_SIZE; row++) {
       for (let col = 0; col < BOARD_SIZE; col++) {
         const cell = cells[row][col];
         const value = currentBoard[row][col];
-        cell.classList.remove('cell-1', 'cell-2', 'cell-3', 'selected');
+        cell.classList.remove('cell-1', 'cell-2', 'cell-3', 'selected', 'matched', 'cell-land');
         if (value >= 1 && value <= 3) {
           cell.classList.add(`cell-${value}`);
+        }
+        if (landing && value >= 1 && value <= 3) {
+          cell.classList.add('cell-land');
         }
       }
     }
   }
 
-  function updateScore(points) {
-    score += points;
+  async function playMoveAnimation(data) {
+    const { board: finalBoard, score: finalScore, animation } = data;
+
+    if (!animation || !Array.isArray(animation.rounds) || animation.rounds.length === 0) {
+      board = finalBoard;
+      setScoreFromServer(finalScore);
+      renderBoard(board);
+      return;
+    }
+
+    const { boardAfterSwap, rounds } = animation;
+
+    board = boardAfterSwap;
+    renderBoard(board);
+    await delay(SWAP_PAUSE_MS);
+
+    for (let i = 0; i < rounds.length; i += 1) {
+      const round = rounds[i];
+      const boardBefore = i === 0 ? boardAfterSwap : rounds[i - 1].boardAfter;
+
+      renderBoard(boardBefore);
+
+      for (const pos of round.matched) {
+        const { row, col } = pos;
+        const cell = cells[row]?.[col];
+        if (cell) {
+          cell.classList.add('matched');
+        }
+      }
+
+      await delay(MATCH_CLEAR_MS);
+
+      board = round.boardAfter;
+      renderBoard(round.boardAfter, { landing: true });
+      await delay(LAND_MS);
+      allCells.forEach((cell) => cell.classList.remove('cell-land'));
+    }
+
+    board = finalBoard;
+    setScoreFromServer(finalScore);
+    renderBoard(board);
+  }
+
+  function setScoreFromServer(total) {
+    score = total;
     scoreEl.textContent = `Счёт: ${score}`;
   }
 
-  function sleep(ms) {
-    return new Promise((resolve) => {
-      window.setTimeout(resolve, ms);
-    });
-  }
-
-  function markMatchedCells(cellsToRemove) {
-    cellsToRemove.forEach(({ row, col }) => {
-      cells[row][col].classList.add('matched');
-    });
-  }
-
-  function clearMatchedCells(cellsToRemove) {
-    cellsToRemove.forEach(({ row, col }) => {
-      cells[row][col].classList.remove('matched');
-    });
-  }
-
-  async function processBoardAfterMove() {
+  async function fetchBoard() {
     boardLocked = true;
-
-    while (findAllTriples(board).length > 0) {
-      const cellsToRemove = collectCellsToRemove(board);
-      markMatchedCells(cellsToRemove);
-      await sleep(MATCH_ANIMATION_MS);
-      clearMatchedCells(cellsToRemove);
-
-      const gained = calculateScore(board);
-      updateScore(gained);
-      board = removeAllTriples(board);
-      board = addNewElements(board);
-
+    try {
+      const response = await fetch(`${API_BASE}/api/board`);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      const data = await response.json();
+      board = data.board;
+      setScoreFromServer(0);
       renderBoard(board);
+    } catch (err) {
+      console.error(err);
+      scoreEl.textContent = 'Не удалось загрузить поле. Запущен ли сервер?';
+    } finally {
+      boardLocked = false;
     }
-
-    boardLocked = false;
   }
 
-  // --- Обработка кликов ---
   function isAdjacent(cell1, cell2) {
     const row1 = Number(cell1.getAttribute('data-row'));
     const col1 = Number(cell1.getAttribute('data-col'));
@@ -220,7 +116,7 @@ document.addEventListener('DOMContentLoaded', () => {
     return Math.abs(row1 - row2) + Math.abs(col1 - col2) === 1;
   }
 
-  function handleClick(cell) {
+  async function handleClick(cell) {
     if (boardLocked) {
       return;
     }
@@ -251,26 +147,34 @@ document.addEventListener('DOMContentLoaded', () => {
     const row2 = Number(second.getAttribute('data-row'));
     const col2 = Number(second.getAttribute('data-col'));
 
-    // Вариант Б: обмен соседних фишек всегда выполняется
-    const temp = board[row1][col1];
-    board[row1][col1] = board[row2][col2];
-    board[row2][col2] = temp;
-
     first.classList.remove('selected');
     selectedCell = null;
 
-    renderBoard(board);
-    processBoardAfterMove();
+    boardLocked = true;
+    try {
+      const response = await fetch(`${API_BASE}/api/move`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ row1, col1, row2, col2 }),
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      const data = await response.json();
+      await playMoveAnimation(data);
+    } catch (err) {
+      console.error(err);
+      scoreEl.textContent = 'Ошибка хода. Проверьте сервер.';
+    } finally {
+      boardLocked = false;
+    }
   }
 
-  // Инициализация игры: генерируем поле без троек и рисуем его
-  board = generateBoard();
-  renderBoard(board);
-  updateScore(0);
+  fetchBoard();
 
-  // навесить handleClick на каждую клетку
   allCells.forEach((cell) => {
-    cell.addEventListener('click', () => handleClick(cell));
+    cell.addEventListener('click', () => {
+      handleClick(cell);
+    });
   });
 });
-

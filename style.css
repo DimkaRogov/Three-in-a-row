@@ -8,6 +8,7 @@
 /* Тёмный фон страницы, читаемый шрифт */
 body {
   margin: 0;
+  width: 100%;
   min-height: 100vh;
   display: flex;
   align-items: center;
@@ -18,11 +19,33 @@ body {
   color: #e8ecf4;
 }
 
-/* Центральная колонка: заголовок, счёт, поле, подсказка */
+/*
+  На всю ширину flex-родителя (иначе блок сужается до контента,
+  и поле оказывается не по центру экрана).
+*/
 .page {
+  flex: 1 1 auto;
   width: 100%;
-  max-width: min(92vw, 420px);
+  max-width: 100%;
+  min-width: 0;
+  margin: 0 auto;
   text-align: center;
+}
+
+/*
+  Поле строго по центру viewport (margin: auto).
+  Правила — position absolute от центра: 50% + половина ширины поля + зазор.
+*/
+.stage {
+  position: relative;
+  width: 100%;
+  margin: 0 auto;
+  /* Размеры поля (должны совпадать с расчётом у .board) */
+  --stage-cell: clamp(64px, 10.5vw, 88px);
+  --stage-gap: 10px;
+  --stage-pad: 22px;
+  --stage-rules-gap: 1.5rem;
+  --stage-board-outer: calc(6 * var(--stage-cell) + 5 * var(--stage-gap) + 2 * var(--stage-pad));
 }
 
 /* Заголовок игры */
@@ -44,21 +67,86 @@ body {
   letter-spacing: 0.02em;
 }
 
+/* Пояснение очков: правее центра поля, компактный блок */
+.score-rules {
+  box-sizing: border-box;
+  position: absolute;
+  left: calc(50% + var(--stage-board-outer) / 2 + var(--stage-rules-gap));
+  top: 0;
+  z-index: 1;
+  width: min(12.5rem, 26vw);
+  max-width: 13rem;
+  margin: 0;
+  padding: 0.45rem 0.55rem;
+  text-align: left;
+  border-radius: 10px;
+  background: rgba(30, 38, 52, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.score-rules__title {
+  margin: 0 0 0.3rem;
+  font-size: clamp(0.65rem, 1.5vw, 0.72rem);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #b8c5df;
+  line-height: 1.25;
+}
+
+.score-rules__list {
+  margin: 0;
+  padding-left: 0.95rem;
+  font-size: clamp(0.7rem, 1.55vw, 0.78rem);
+  line-height: 1.4;
+  color: #a8b6d4;
+}
+
+.score-rules__list li + li {
+  margin-top: 0.3rem;
+}
+
+/* Средняя ширина: чуть меньше клетки, чтобы поле + правила влезали */
+@media (max-width: 900px) and (min-width: 641px) {
+  .stage {
+    --stage-cell: clamp(54px, 8.5vw, 76px);
+  }
+}
+
+/* Узкий экран: без наложений — правила под полем; поле чуть меньше, чтобы влезало */
+@media (max-width: 640px) {
+  .stage {
+    --stage-cell: clamp(40px, 11vw, 58px);
+    --stage-pad: 14px;
+    --stage-gap: 6px;
+  }
+
+  .score-rules {
+    position: static;
+    width: 100%;
+    max-width: min(28em, 100%);
+    margin: 1rem auto 0;
+    left: auto;
+  }
+}
+
 /*
   Игровое поле: сетка 6×6.
   --cell-size подстраивается под ширину экрана, чтобы поле не вылезало за края.
 */
 .board {
-  --gap: 8px;
-  --cell-size: 60px;
+  --gap: var(--stage-gap, 10px);
+  --cell-size: var(--stage-cell, 72px);
 
   display: grid;
   grid-template-columns: repeat(6, var(--cell-size));
   grid-template-rows: repeat(6, var(--cell-size));
   gap: var(--gap);
   justify-content: center;
+  width: fit-content;
+  max-width: 100%;
   margin: 0 auto;
-  padding: 18px;
+  padding: var(--stage-pad, 22px);
   background: linear-gradient(145deg, #252d3d 0%, #1c2330 100%);
   border-radius: 16px;
   box-shadow:
@@ -116,15 +204,47 @@ body {
   transform: scale(1.1);
 }
 
-/* Совпавшие фишки перед заменой */
+/* Совпавшие фишки: вспышка и исчезновение */
 .matched {
-  animation: explode 0.4s ease-out forwards;
+  z-index: 2;
+  animation: explode 0.52s ease-in forwards;
 }
 
 @keyframes explode {
-  0%   { transform: scale(1);   opacity: 1; }
-  50%  { transform: scale(1.4); opacity: 0.6; }
-  100% { transform: scale(0);   opacity: 0; }
+  0% {
+    transform: scale(1);
+    opacity: 1;
+    filter: brightness(1);
+    box-shadow: inset 0 0 0 0 rgba(255, 230, 150, 0);
+  }
+  22% {
+    transform: scale(1.12);
+    opacity: 1;
+    filter: brightness(1.4);
+    box-shadow: inset 0 0 0 3px rgba(255, 220, 120, 0.55);
+  }
+  100% {
+    transform: scale(0);
+    opacity: 0;
+    filter: brightness(1);
+    box-shadow: inset 0 0 0 0 rgba(255, 230, 150, 0);
+  }
+}
+
+/* Новые фишки после падения — короткий «отскок» */
+.cell.cell-land::before {
+  animation: pieceLand 0.32s cubic-bezier(0.34, 1.45, 0.64, 1) forwards;
+}
+
+@keyframes pieceLand {
+  from {
+    transform: scale(0.15);
+    opacity: 0.35;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 /* Подсказка под полем */

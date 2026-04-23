@@ -1,12 +1,18 @@
-import express = require("express");
+import cors = require("cors")
+import express = require("express")
+import routes = require("./routes")
 
-const app = express();
-const PORT = 3000;
+const app = express()
+const PORT = 3000
+
+app.use(cors())
+app.use(express.json())
+app.use(routes)
 
 app.get("/", (_req, res) => {
-  res.send("Server is running");
-});
+  res.send("Server is running")
+})
 
 app.listen(PORT, () => {
-  console.log(`Server started at http://localhost:${PORT}`);
-});
+  console.log(`Server started at http://localhost:${PORT}`)
+})
