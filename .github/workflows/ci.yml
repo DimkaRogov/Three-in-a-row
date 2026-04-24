@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [20, 22]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+      - name: Install dependencies
+        working-directory: server
+        run: npm ci
+      - name: Lint
+        working-directory: server
+        run: npm run lint
+      - name: Build
+        working-directory: server
+        run: npm run build
+      - name: Test
+        working-directory: server
+        run: npm test
+
+  haskell-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: haskell-actions/setup@v2
+        with:
+          ghc-version: "9.6"
+          enable-stack: false
+      # Hackage index must be fetched before `cabal build` (one step = one clear log block).
+      - name: Hackage index + cabal build
+        run: cabal update && cabal build

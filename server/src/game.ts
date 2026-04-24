@@ -66,7 +66,13 @@ function isAdjacent(r1: number, c1: number, r2: number, c2: number): boolean {
   return rowDiff + colDiff === 1
 }
 
-function swapCells(board: Board, r1: number, c1: number, r2: number, c2: number): Board {
+function swapCells(
+  board: Board,
+  r1: number,
+  c1: number,
+  r2: number,
+  c2: number
+): Board {
   const nextBoard = cloneBoard(board)
 
   if (!isAdjacent(r1, c1, r2, c2)) {
@@ -108,7 +114,10 @@ function findHorizontalTriples(board: Board): Triple[] {
 
       if (value !== undefined && end - col >= 3) {
         triples.push({
-          cells: Array.from({ length: end - col }, (_, i) => ({ row, col: col + i })),
+          cells: Array.from({ length: end - col }, (_, i) => ({
+            row,
+            col: col + i,
+          })),
         })
       }
 
@@ -135,7 +144,10 @@ function findVerticalTriples(board: Board): Triple[] {
 
       if (value !== undefined && end - row >= 3) {
         triples.push({
-          cells: Array.from({ length: end - row }, (_, i) => ({ row: row + i, col })),
+          cells: Array.from({ length: end - row }, (_, i) => ({
+            row: row + i,
+            col,
+          })),
         })
       }
 

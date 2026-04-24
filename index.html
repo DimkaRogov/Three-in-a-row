@@ -92,6 +92,22 @@
       Кликните на фишку, затем на соседнюю чтобы поменять их местами
     </p>
   </main>
+  <script src="config.prod.js"></script>
+  <script>
+    (function () {
+      const raw = window.__API_BASE__
+      if (typeof raw === 'string' && raw.trim() !== '') {
+        window.__API_BASE__ = raw.trim()
+        return
+      }
+      const h = location.hostname
+      if (h === 'localhost' || h === '127.0.0.1' || h === '') {
+        window.__API_BASE__ = 'http://localhost:3000'
+      } else {
+        window.__API_BASE__ = ''
+      }
+    })()
+  </script>
   <script src="game.js"></script>
 </body>
 </html>

@@ -1,6 +1,17 @@
 document.addEventListener('DOMContentLoaded', () => {
   const BOARD_SIZE = 6;
-  const API_BASE = 'http://localhost:3000';
+  function resolveApiBase() {
+    const raw = window.__API_BASE__;
+    if (typeof raw === 'string' && raw.trim() !== '') {
+      return raw.trim();
+    }
+    const h = location.hostname;
+    if (h === 'localhost' || h === '127.0.0.1' || h === '') {
+      return 'http://localhost:3000';
+    }
+    return '';
+  }
+  const API_BASE = resolveApiBase();
 
   const SWAP_PAUSE_MS = 200;
   const MATCH_CLEAR_MS = 540;
@@ -92,16 +103,17 @@ document.addEventListener('DOMContentLoaded', () => {
   async function fetchBoard() {
     boardLocked = true;
     try {
-      const response = await fetch(`${API_BASE}/api/board`);
+      const response = await fetch(`${API_BASE}/api/new-game`, {
+        method: 'POST',
+      });
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
       }
       const data = await response.json();
       board = data.board;
-      setScoreFromServer(0);
+      setScoreFromServer(data.score ?? 0);
       renderBoard(board);
-    } catch (err) {
-      console.error(err);
+    } catch (_err) {
       scoreEl.textContent = 'Не удалось загрузить поле. Запущен ли сервер?';
     } finally {
       boardLocked = false;
@@ -162,8 +174,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       const data = await response.json();
       await playMoveAnimation(data);
-    } catch (err) {
-      console.error(err);
+    } catch (_err) {
       scoreEl.textContent = 'Ошибка хода. Проверьте сервер.';
     } finally {
       boardLocked = false;
