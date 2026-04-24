@@ -7,6 +7,10 @@
 
 Live Demo: [https://dimkarogov.github.io/Three-in-a-row/](https://dimkarogov.github.io/Three-in-a-row/)
 
+> [!NOTE]
+> Backend развернут на Render `Free plan`, поэтому после простоя возможен cold start.
+> Если игра не загрузилась сразу, подождите примерно `30-60 секунд` и обновите страницу.
+
 Проект с игрой "Три в ряд", доступной в двух версиях: консольной и браузерной.
 
 ## Содержание
