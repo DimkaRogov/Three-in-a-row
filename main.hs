@@ -18,14 +18,10 @@ getCell board r c = board !! r !! c
 generateNewElement :: IO Int
 generateNewElement = randomRIO (1, 3)
 
--- генерируем поле и проверяем что нет троек
--- если есть - генерируем заново
+-- Случайное поле без доработок под «нет троек в начале» (как в веб-версии)
 generateBoard :: IO Board
-generateBoard = do
-    board <- mapM (const $ mapM (const generateNewElement) [1..boardSize]) [1..boardSize]
-    if hasAnyTriples board
-        then generateBoard
-        else return board
+generateBoard =
+    mapM (const $ mapM (const generateNewElement) [1..boardSize]) [1..boardSize]
 
 -- вывод поля с номерами строк и столбцов
 printBoard :: Board -> IO ()
@@ -120,31 +116,15 @@ removeAllTriples board =
     let cells = collectCellsToRemove board
     in foldl (\acc (r, c) -> modifyCell acc r c 0) board cells
 
--- добавляем новые элементы и проверяем что они не создают тройки
--- если создают - генерируем заново
-addElementsSafely :: Board -> [Int] -> [(Int, Int)] -> IO Board
-addElementsSafely board elements positions = do
-    let updatedBoard = foldl (\acc (pos, el) -> addElementSafely acc (pos, el)) board (zip positions elements)
-    if hasAnyTriples updatedBoard
-        then do
-            newElements <- mapM (const generateNewElement) elements
-            addElementsSafely board newElements positions
-        else return updatedBoard
-
-addElementSafely :: Board -> ((Int, Int), Int) -> Board
-addElementSafely board ((row, col), element) =
-    let newRow = take col (board !! row) ++ [element] ++ drop (col + 1) (board !! row)
-    in take row board ++ [newRow] ++ drop (row + 1) board
-
--- находим пустые ячейки и заполняем их
+-- находим пустые ячейки и заполняем случайными 1..3
 addNewElements :: Board -> IO Board
 addNewElements board = do
     let emptyCells = [(r, c) | r <- [0..boardSize-1], c <- [0..boardSize-1], getCell board r c == 0]
     if null emptyCells
         then return board
         else do
-            newElements <- mapM (const generateNewElement) emptyCells
-            addElementsSafely board newElements emptyCells
+            newEls <- mapM (const generateNewElement) emptyCells
+            return $ foldl (\b ((r, c), e) -> modifyCell b r c e) board (zip emptyCells newEls)
 
 main :: IO ()
 main = do
@@ -191,11 +171,6 @@ handleMove score board (r1, c1, r2, c2) =
         Nothing -> do
             putStrLn "Ошибка: элементы должны быть соседними и в пределах поля!"
             gameLoop score board
-        Just newBoard ->
-            if not (hasAnyTriples newBoard)
-                then do
-                    putStrLn "Этот обмен не даёт троек - ход не засчитан!"
-                    gameLoop score board
-                else do
-                    putStrLn "Обмен выполнен!"
-                    gameLoop score newBoard
+        Just newBoard -> do
+            putStrLn "Обмен выполнен!"
+            gameLoop score newBoard
