@@ -39,7 +39,6 @@ jobs:
         with:
           ghc-version: "9.6"
           enable-stack: false
-      - name: Cabal update (fetch Hackage index)
-        run: cabal update
-      - name: Cabal build
-        run: cabal build
+      # Hackage index must be fetched before `cabal build` (one step = one clear log block).
+      - name: Hackage index + cabal build
+        run: cabal update && cabal build
