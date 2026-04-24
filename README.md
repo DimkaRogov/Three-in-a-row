@@ -138,8 +138,9 @@ curl http://localhost:3000/
 ### Frontend (GitHub Pages)
 
 - Workflow: `.github/workflows/deploy-pages.yml`
-- Для продового API задайте secret `BACKEND_API_BASE` в настройках репозитория
-- После push в `main` статические файлы деплоятся автоматически
+- **Обязательно** задайте `BACKEND_API_BASE`: **Settings → Secrets and variables → Actions** — либо *Secret*, либо *Variable* (второе удобно, URL не секрет) со значением корня API, например `https://ваш-сервис.onrender.com` (без `/` в конце, без пути).
+- Сборка **упадёт** без этой настройки — иначе страница на `github.io` пытается обратиться не к Render, и в игре пустое поле / ошибка загрузки.
+- После push в `main` статика деплоится автоматически; при смене URL сделайте re-run workflow «Deploy Pages».
 
 ### Backend (Render)
 

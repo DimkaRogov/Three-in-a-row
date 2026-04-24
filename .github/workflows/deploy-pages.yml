@@ -22,10 +22,19 @@ jobs:
         run: |
           mkdir -p site
           cp index.html style.css game.js site/
+          # Public Render URL: use either Repository secret or variable (Variables → Actions).
           API_BASE="${{ secrets.BACKEND_API_BASE }}"
           if [ -z "$API_BASE" ]; then
-            API_BASE="http://localhost:3000"
+            API_BASE="${{ vars.BACKEND_API_BASE }}"
           fi
+          if [ -z "$API_BASE" ]; then
+            echo "::error::Set BACKEND_API_BASE: Repository Settings → Secrets and variables → Actions."
+            echo "  Add a secret (or a variable) BACKEND_API_BASE = your Render service root, e.g. https://app-name.onrender.com"
+            echo "  Then re-run the workflow. Do not use http://localhost here — Pages runs in the browser, not on your PC."
+            exit 1
+          fi
+          # Trim accidental trailing slash so fetch to /api/... is correct
+          API_BASE="${API_BASE%/}"
           printf "window.__API_BASE__ = \"%s\";\n" "$API_BASE" > site/config.prod.js
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v4

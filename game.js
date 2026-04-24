@@ -3,7 +3,11 @@ document.addEventListener('DOMContentLoaded', () => {
   function resolveApiBase() {
     const raw = window.__API_BASE__;
     if (typeof raw === 'string' && raw.trim() !== '') {
-      return raw.trim();
+      let b = raw.trim();
+      if (b.endsWith('/')) {
+        b = b.slice(0, -1);
+      }
+      return b;
     }
     const h = location.hostname;
     if (h === 'localhost' || h === '127.0.0.1' || h === '') {
@@ -114,7 +118,13 @@ document.addEventListener('DOMContentLoaded', () => {
       setScoreFromServer(data.score ?? 0);
       renderBoard(board);
     } catch (_err) {
-      scoreEl.textContent = 'Не удалось загрузить поле. Запущен ли сервер?';
+      if (API_BASE === '' && !['localhost', '127.0.0.1', ''].includes(location.hostname)) {
+        scoreEl.textContent =
+          'Нет URL API. Для GitHub Pages задайте секрет BACKEND_API_BASE = адрес бэкенда на Render, затем пересоберите Pages (см. README).';
+      } else {
+        scoreEl.textContent =
+          'Не удалось загрузить поле. Проверьте, что бэкенд на Render запущен и CORS/URL верны: ' + API_BASE;
+      }
     } finally {
       boardLocked = false;
     }
