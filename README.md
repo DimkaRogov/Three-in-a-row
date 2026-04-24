@@ -109,7 +109,7 @@ npm run dev
 Для прод-режима endpoint задаётся через `config.prod.js`:
 
 ```js
-// Замените your-backend-url на URL вашего API
+// Замените your-backend-url на URL вашего APII
 window.__API_BASE__ = "https://your-backend-url.onrender.com"
 ```
 
