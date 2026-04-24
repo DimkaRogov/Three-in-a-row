@@ -1,5 +1,15 @@
 dist-newstyle/
 node_modules/
+server/dist/
+server/coverage/
+server/src/*.js
+server/src/*.js.map
+server/src/*.d.ts
+server/src/*.d.ts.map
+.DS_Store
+.env
+.env.*
+*.local
 
 # GHC/Cabal build artifacts
 *.hi

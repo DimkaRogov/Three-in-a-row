@@ -1,0 +1,35 @@
+name: Deploy Pages
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      # `BACKEND_API_BASE` in repo secrets: full API URL, e.g. https://....onrender.com
+      - name: Build static bundle
+        run: |
+          mkdir -p site
+          cp index.html style.css game.js site/
+          API_BASE="${{ secrets.BACKEND_API_BASE }}"
+          if [ -z "$API_BASE" ]; then
+            API_BASE="http://localhost:3000"
+          fi
+          printf "window.__API_BASE__ = \"%s\";\n" "$API_BASE" > site/config.prod.js
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - id: deployment
+        uses: actions/deploy-pages@v4

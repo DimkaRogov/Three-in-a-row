@@ -3,7 +3,7 @@ import express = require("express")
 import routes = require("./routes")
 
 const app = express()
-const PORT = 3000
+const PORT = Number(process.env.PORT || 3000)
 
 app.use(cors())
 app.use(express.json())
@@ -14,5 +14,5 @@ app.get("/", (_req, res) => {
 })
 
 app.listen(PORT, () => {
-  console.log(`Server started at http://localhost:${PORT}`)
+  console.log(`Server listening on port ${PORT}`)
 })

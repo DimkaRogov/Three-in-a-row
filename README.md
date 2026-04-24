@@ -1,110 +1,170 @@
 # Tree in a row
 
+![CI](https://github.com/DimkaRogov/Tree-in-a-row/actions/workflows/ci.yml/badge.svg)
+![Deploy Pages](https://github.com/DimkaRogov/Tree-in-a-row/actions/workflows/deploy-pages.yml/badge.svg)
+![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)
+![Node.js](https://img.shields.io/badge/node-%3E%3D20-339933?logo=node.js&logoColor=white)
+
+Live Demo: [https://dimkarogov.github.io/Tree-in-a-row/](https://dimkarogov.github.io/Tree-in-a-row/)
+
 Проект с игрой "Три в ряд", доступной в двух версиях: консольной и браузерной.
 
-## Версии игры
+## Содержание
 
-- **Консольная (Haskell)**: поле `6x6`, ввод координат через терминал.
-- **Браузерная (HTML/CSS/JavaScript)**: поле `6x6`, управление кликами; логика игры на сервере (Node.js + Express).
+- [Архитектура](#архитектура)
+- [Tech Stack](#tech-stack)
+- [Скриншоты](#скриншоты)
+- [Консольная версия (Haskell)](#консольная-версия-haskell)
+- [Сервер (TypeScript + Express)](#сервер-typescript--express)
+- [Браузерная версия (HTML/CSS/JS)](#браузерная-версия-htmlcssjs)
+- [Docker](#docker)
+- [Deploy](#deploy)
+- [CI](#ci)
+- [Структура проекта](#структура-проекта)
+
+## Архитектура
+
+```mermaid
+flowchart LR
+    browserClient[BrowserClient]
+    staticHost[GitHubPagesStatic]
+    apiServer[ExpressApiServer]
+    gameCore[GameCoreLogic]
+    haskellCli[HaskellCliVersion]
+
+    browserClient --> staticHost
+    browserClient -->|"/api/*"| apiServer
+    apiServer --> gameCore
+    haskellCli --> gameCore
+```
+
+## Tech Stack
+
+- Frontend: `HTML`, `CSS`, `Vanilla JavaScript`
+- Backend: `Node.js`, `Express`, `TypeScript`
+- Tests: `Vitest`
+- Lint/Format: `ESLint`, `Prettier`
+- CI/CD: `GitHub Actions`, `GitHub Pages`
+- CLI version: `Haskell` + `Cabal`
+
+## Скриншоты
+
+- `docs/screenshot.png` — основной экран игры.
 
 ## Консольная версия (Haskell)
 
 ### Возможности
 
-- Поле `6x6` с числами от `1` до `3`.
-- Обмен только соседних элементов (по горизонтали или вертикали).
-- Поиск горизонтальных троек.
-- Удаление троек и генерация новых элементов.
-- Подсчёт очков.
-- Выход из игры по команде `q`.
+- Поле `6x6` с числами от `1` до `3`
+- Обмен только соседних элементов
+- Поиск горизонтальных и вертикальных троек
+- Удаление троек и генерация новых элементов
+- Подсчёт очков
+- Выход из игры по команде `q`
 
 ### Требования
 
-- [GHC](https://www.haskell.org/ghc/) (проект собран с `ghc-9.14.1`)
+- [GHC](https://www.haskell.org/ghc/)
 - [Cabal](https://www.haskell.org/cabal/)
 
 ### Запуск
-
-Из корня проекта:
 
 ```bash
 cabal run tree-in-a-row
 ```
 
-Или:
+или
 
 ```bash
 cabal build
 cabal exec tree-in-a-row
 ```
 
-### Правила ввода
-
-Во время хода введите координаты двух соседних клеток в формате:
-
-```text
-строка1 столбец1 строка2 столбец2
-```
-
-Пример:
-
-```text
-1 1 1 2
-```
-
-- Координаты вводятся в диапазоне от `1` до `6`.
-- Элементы должны быть соседними.
-- Для выхода введите `q`.
-
-## Сервер (браузерная версия)
-
-### Назначение
-
-API на TypeScript: генерация поля, обработка ходов и подсчёт очков. Клиент (`game.js`) запрашивает состояние по HTTP; CORS включён для запросов с другого origin (например, при открытии `index.html` с диска или с локального статического сервера).
-
-### Требования
-
-- [Node.js](https://nodejs.org/) с `npm`
+## Сервер (TypeScript + Express)
 
 ### Установка и запуск
 
-Из каталога `server`:
-
 ```bash
-npm install
+cd server
+npm ci
 npm run dev
 ```
 
-Сервер слушает порт `3000` (адрес по умолчанию в `game.js`: `http://localhost:3000`).
+Сервер слушает `http://localhost:3000`.
 
 ### API
 
-- `GET /api/board` — новое поле и сброс счёта на сервере.
-- `POST /api/move` — тело JSON: `{ "row1", "col1", "row2", "col2" }`; ответ: актуальное поле и счёт.
-- `GET /api/score` — текущий счёт (по необходимости).
+- `POST /api/new-game` — создать новое поле и сбросить счёт
+- `GET /api/board` — получить текущее поле и счёт (без изменения состояния)
+- `POST /api/move` — выполнить ход `{ row1, col1, row2, col2 }`
+- `GET /api/score` — получить текущий счёт
 
-## Браузерная версия (HTML/CSS/JavaScript)
+## Браузерная версия (HTML/CSS/JS)
 
-### Возможности
+1. Запустите backend (`npm run dev` в `server/`)
+2. Откройте `index.html` в браузере
 
-- Поле `6x6`.
-- Выбор и обмен соседних фишек кликом.
-- Отображение поля и счёта по данным с сервера.
+По умолчанию фронт ходит в `http://localhost:3000`.
 
-### Запуск
+Для прод-режима endpoint задаётся через `config.prod.js`:
 
-1. Запустите сервер (см. раздел выше).
-2. Откройте `index.html` в браузере (или отдайте корень проекта статическим сервером — главное, чтобы был доступен сервер на `localhost:3000`).
+```js
+// Замените your-backend-url на URL вашего API
+window.__API_BASE__ = "https://your-backend-url.onrender.com"
+```
+
+## Docker
+
+Сборка контейнера:
+
+```bash
+docker build -t tree-in-a-row-api ./server
+```
+
+Запуск:
+
+```bash
+docker run --rm -p 3000:3000 tree-in-a-row-api
+```
+
+Проверка:
+
+```bash
+curl http://localhost:3000/
+```
+
+## Deploy
+
+### Frontend (GitHub Pages)
+
+- Workflow: `.github/workflows/deploy-pages.yml`
+- Для продового API задайте secret `BACKEND_API_BASE` в настройках репозитория
+- После push в `main` статические файлы деплоятся автоматически
+
+### Backend (Render)
+
+В репозитории есть `render.yaml`.
+
+Вариант через UI Render:
+1. New Web Service -> подключить репозиторий
+2. Root Directory: `server`
+3. Build Command: `npm ci && npm run build`
+4. Start Command: `node dist/index.js`
+
+## CI
+
+Workflow `.github/workflows/ci.yml` запускает:
+- backend lint/build/test (Node 20 и 22)
+- haskell smoke build (`cabal build`)
 
 ## Структура проекта
 
-- `main.hs` — логика консольной версии на Haskell.
-- `tree-in-a-row.cabal` — конфигурация Cabal-проекта.
-- `index.html` — разметка браузерной версии.
-- `style.css` — стили браузерной версии.
-- `game.js` — интерфейс: отрисовка поля, клики, запросы к API.
-- `server/` — сервер на Node.js (Express, TypeScript).
-  - `server/src/index.ts` — точка входа.
-  - `server/src/game.ts` — логика поля и ходов.
-  - `server/src/routes.ts` — маршруты API.
-  - `server/src/types.ts` — типы данных.
+- `main.hs` — логика консольной версии на Haskell
+- `tree-in-a-row.cabal` — конфигурация Cabal-проекта
+- `index.html`, `style.css`, `game.js` — браузерный клиент
+- `config.prod.js` — настройка API endpoint для production
+- `server/` — backend на Node.js + TypeScript
+  - `server/src/index.ts` — точка входа
+  - `server/src/game.ts` — игровая логика
+  - `server/src/routes.ts` — API маршруты
+  - `server/src/types.ts` — типы данных
