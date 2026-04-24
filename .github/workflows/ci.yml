@@ -39,5 +39,7 @@ jobs:
         with:
           ghc-version: "9.6"
           enable-stack: false
+      - name: Cabal update (fetch Hackage index)
+        run: cabal update
       - name: Cabal build
         run: cabal build
