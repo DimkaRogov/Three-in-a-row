@@ -16,7 +16,7 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       # `BACKEND_API_BASE` in repo secrets: full API URL, e.g. https://....onrender.com
       - name: Build static bundle
         run: |
@@ -28,7 +28,7 @@ jobs:
           fi
           printf "window.__API_BASE__ = \"%s\";\n" "$API_BASE" > site/config.prod.js
       - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v4
         with:
           path: site
       - id: deployment
