@@ -5,7 +5,6 @@ import type { Board } from "./types"
 const {
   calculateScore,
   collectCellsToRemove,
-  findAllTriples,
   generateBoard,
   removeAllTriples,
   swapCells,
@@ -18,10 +17,14 @@ describe("game logic", () => {
     expect(board.every((row: number[]) => row.length === 6)).toBe(true)
   })
 
-  it("generateBoard has no initial triples", () => {
-    for (let i = 0; i < 25; i += 1) {
+  it("generateBoard fills cells with 1, 2, or 3 only", () => {
+    for (let i = 0; i < 10; i += 1) {
       const board = generateBoard()
-      expect(findAllTriples(board)).toHaveLength(0)
+      for (const row of board) {
+        for (const v of row) {
+          expect([1, 2, 3] as const).toContainEqual(v)
+        }
+      }
     }
   })
 

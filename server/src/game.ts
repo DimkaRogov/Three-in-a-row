@@ -34,30 +34,9 @@ function generateElement(): Cell {
 }
 
 function generateBoard(): Board {
-  const board: Board = Array.from({ length: ROWS }, () =>
+  return Array.from({ length: ROWS }, () =>
     Array.from({ length: COLS }, () => generateElement())
   )
-
-  for (let row = 0; row < ROWS; row += 1) {
-    for (let col = 0; col < COLS; col += 1) {
-      const rowCells = board[row]
-      if (rowCells === undefined) {
-        continue
-      }
-      while (
-        (col >= 2 &&
-          rowCells[col] === rowCells[col - 1] &&
-          rowCells[col] === rowCells[col - 2]) ||
-        (row >= 2 &&
-          rowCells[col] === board[row - 1]?.[col] &&
-          rowCells[col] === board[row - 2]?.[col])
-      ) {
-        rowCells[col] = generateElement()
-      }
-    }
-  }
-
-  return board
 }
 
 function isAdjacent(r1: number, c1: number, r2: number, c2: number): boolean {
