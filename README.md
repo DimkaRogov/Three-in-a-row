@@ -1,11 +1,11 @@
 # Tree in a row
 
-![CI](https://github.com/DimkaRogov/Tree-in-a-row/actions/workflows/ci.yml/badge.svg)
-![Deploy Pages](https://github.com/DimkaRogov/Tree-in-a-row/actions/workflows/deploy-pages.yml/badge.svg)
+![CI](https://github.com/DimkaRogov/Three-in-a-row/actions/workflows/ci.yml/badge.svg)
+![Deploy Pages](https://github.com/DimkaRogov/Three-in-a-row/actions/workflows/deploy-pages.yml/badge.svg)
 ![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)
 ![Node.js](https://img.shields.io/badge/node-%3E%3D20-339933?logo=node.js&logoColor=white)
 
-Live Demo: [https://dimkarogov.github.io/Tree-in-a-row/](https://dimkarogov.github.io/Tree-in-a-row/)
+Live Demo: [https://dimkarogov.github.io/Three-in-a-row/](https://dimkarogov.github.io/Three-in-a-row/)
 
 Проект с игрой "Три в ряд", доступной в двух версиях: консольной и браузерной.
 
