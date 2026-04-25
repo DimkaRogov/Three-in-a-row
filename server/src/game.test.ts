@@ -6,6 +6,7 @@ const {
   calculateScore,
   collectCellsToRemove,
   generateBoard,
+  hasAnyValidMove,
   removeAllTriples,
   swapCells,
 } = game
@@ -150,6 +151,41 @@ describe("game logic", () => {
       [3, 1, 2, 3, 1, 2],
     ]
     expect(calculateScore(board)).toBe(30)
+  })
+
+  it("hasAnyValidMove returns true for a fresh random board with retry", () => {
+    let any = false
+
+    for (let i = 0; i < 5; i += 1) {
+      if (hasAnyValidMove(generateBoard())) {
+        any = true
+        break
+      }
+    }
+
+    expect(any).toBe(true)
+  })
+
+  it("hasAnyValidMove returns false on a constructed dead board", () => {
+    const dead: Board = [
+      [1, 2],
+      [3, 1],
+    ]
+
+    expect(hasAnyValidMove(dead)).toBe(false)
+  })
+
+  it("hasAnyValidMove finds a move when a horizontal triple is one swap away", () => {
+    const board: Board = [
+      [1, 1, 2, 3, 1, 2],
+      [2, 3, 1, 2, 3, 1],
+      [3, 1, 2, 3, 1, 2],
+      [1, 2, 3, 1, 2, 3],
+      [2, 3, 1, 2, 3, 1],
+      [3, 1, 2, 3, 1, 2],
+    ]
+
+    expect(hasAnyValidMove(board)).toBe(true)
   })
 
   it("applies cascade score multipliers by round", () => {

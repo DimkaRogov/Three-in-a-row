@@ -7,6 +7,10 @@ export interface GameState {
   score: number
 }
 
+export interface BoardResponse extends GameState {
+  gameOver: boolean
+}
+
 export interface MoveRequest {
   row1: number
   col1: number
@@ -24,6 +28,7 @@ export interface MoveAnimationRound {
 export interface MoveResponse {
   board: Board
   score: number
+  gameOver: boolean
   reverted: boolean
   animation: {
     boardAfterSwap: Board

@@ -230,6 +230,33 @@ function calculateScore(board: Board): number {
   return removedCellsCount * 10
 }
 
+function hasAnyValidMove(board: Board): boolean {
+  const rows = board.length
+  const cols = board[0]?.length ?? 0
+
+  for (let row = 0; row < rows; row += 1) {
+    for (let col = 0; col < cols; col += 1) {
+      if (
+        col + 1 < cols &&
+        collectCellsToRemove(swapCells(board, row, col, row, col + 1)).length >
+          0
+      ) {
+        return true
+      }
+
+      if (
+        row + 1 < rows &&
+        collectCellsToRemove(swapCells(board, row, col, row + 1, col)).length >
+          0
+      ) {
+        return true
+      }
+    }
+  }
+
+  return false
+}
+
 export = {
   cloneBoard,
   generateElement,
@@ -243,4 +270,5 @@ export = {
   removeAllTriples,
   addNewElements,
   calculateScore,
+  hasAnyValidMove,
 }

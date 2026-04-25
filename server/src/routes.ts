@@ -2,6 +2,7 @@ import express = require("express")
 import game = require("./game")
 import type {
   Board,
+  BoardResponse,
   MoveAnimationRound,
   MoveRequest,
   MoveResponse,
@@ -14,6 +15,7 @@ const {
   cloneBoard,
   collectCellsToRemove,
   generateBoard,
+  hasAnyValidMove,
   removeAllTriples,
   swapCells,
 } = game
@@ -24,14 +26,26 @@ let board: Board = generateBoard()
 let score = 0
 
 router.get("/api/board", (_req, res) => {
-  res.json({ board, score })
+  const response: BoardResponse = {
+    board,
+    score,
+    gameOver: !hasAnyValidMove(board),
+  }
+
+  res.json(response)
 })
 
 router.post("/api/new-game", (_req, res) => {
   board = generateBoard()
   score = 0
 
-  res.json({ board, score })
+  const response: BoardResponse = {
+    board,
+    score,
+    gameOver: !hasAnyValidMove(board),
+  }
+
+  res.json(response)
 })
 
 function isInRange(n: number): boolean {
@@ -73,6 +87,10 @@ router.post("/api/move", (req, res) => {
       .json({ error: `row/col must be in [0, ${BOARD_SIZE - 1}]` })
   }
 
+  if (!hasAnyValidMove(board)) {
+    return res.status(409).json({ error: "Game is over. Start a new game." })
+  }
+
   const preSwapBoard = cloneBoard(board)
   let workingBoard = swapCells(board, r1, c1, r2, c2)
   const boardAfterSwap = cloneBoard(workingBoard)
@@ -82,6 +100,7 @@ router.post("/api/move", (req, res) => {
     const response: MoveResponse = {
       board: preSwapBoard,
       score,
+      gameOver: false,
       reverted: true,
       animation: { boardAfterSwap, rounds: [] },
     }
@@ -113,10 +132,12 @@ router.post("/api/move", (req, res) => {
 
   board = workingBoard
   score += gainedThisMove
+  const gameOver = !hasAnyValidMove(board)
 
   const response: MoveResponse = {
     board,
     score,
+    gameOver,
     reverted: false,
     animation: { boardAfterSwap, rounds },
   }
