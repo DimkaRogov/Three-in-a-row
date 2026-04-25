@@ -31,6 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const boardEl = document.querySelector('.board');
   const scoreEl = document.querySelector('.score');
+  const newGameBtn = document.getElementById('new-game-btn');
   const stageEl = document.querySelector('.stage');
   const gameOverModal = document.getElementById('game-over-modal');
   const gameOverScoreEl = document.getElementById('game-over-score');
@@ -202,6 +203,23 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  async function startNewGame(options = {}) {
+    if (boardLocked && !gameOver) {
+      return;
+    }
+
+    const { requireConfirmation = false } = options;
+    if (
+      requireConfirmation &&
+      score > 0 &&
+      !confirm('Начать новую игру? Текущий счёт будет сброшен.')
+    ) {
+      return;
+    }
+
+    await fetchBoard();
+  }
+
   function isAdjacent(cell1, cell2) {
     const row1 = Number(cell1.getAttribute('data-row'));
     const col1 = Number(cell1.getAttribute('data-col'));
@@ -269,8 +287,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   fetchBoard();
 
+  newGameBtn?.addEventListener('click', () => {
+    startNewGame({ requireConfirmation: true });
+  });
+
   gameOverNewGameBtn?.addEventListener('click', () => {
-    fetchBoard();
+    startNewGame();
   });
 
   allCells.forEach((cell) => {

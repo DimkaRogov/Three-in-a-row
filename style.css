@@ -59,12 +59,24 @@ body {
 }
 
 /* Панель счёта */
+.header-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  margin: 0 0 1.25rem;
+}
+
 .score {
   margin: 0 0 1.25rem;
   font-size: clamp(1rem, 3.5vw, 1.2rem);
   font-weight: 600;
   color: #c5d0e6;
   letter-spacing: 0.02em;
+}
+
+.header-row .score {
+  margin: 0;
 }
 
 /* Пояснение очков: правее центра поля, компактный блок */
@@ -328,6 +340,16 @@ body {
 
 .btn--primary:hover {
   background: #2563eb;
+}
+
+.btn--secondary {
+  color: #e8ecf4;
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.btn--secondary:hover {
+  background: rgba(255, 255, 255, 0.15);
 }
 
 @keyframes fadeIn {
