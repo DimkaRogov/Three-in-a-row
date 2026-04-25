@@ -2,7 +2,7 @@ import type { Board, Cell } from "./types"
 
 const ROWS = 6
 const COLS = 6
-const CELL_TYPES: Cell[] = [1, 2, 3]
+const CELL_TYPES: Cell[] = [1, 2, 3, 4, 5]
 const EMPTY = 0
 
 type InternalCell = Cell | 0
