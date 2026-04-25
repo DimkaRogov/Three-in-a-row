@@ -1,5 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
   const BOARD_SIZE = 6;
+  const BEST_SCORE_KEY = 'tree-in-a-row:bestScore:v1';
+
   function resolveApiBase() {
     const raw = window.__API_BASE__;
     if (typeof raw === 'string' && raw.trim() !== '') {
@@ -31,12 +33,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const boardEl = document.querySelector('.board');
   const scoreEl = document.querySelector('.score');
+  const bestScoreEl = document.getElementById('best-score-value');
   const newGameBtn = document.getElementById('new-game-btn');
   const stageEl = document.querySelector('.stage');
   const gameOverModal = document.getElementById('game-over-modal');
+  const gameOverTitleEl = document.getElementById('game-over-title');
   const gameOverScoreEl = document.getElementById('game-over-score');
   const gameOverNewGameBtn = document.getElementById('game-over-new-game');
   const allCells = Array.from(boardEl.querySelectorAll('.cell'));
+  const defaultGameOverTitle = gameOverTitleEl?.textContent || 'Игра окончена';
+
+  let bestScore = readStoredBestScore();
+  let currentGameHasNewRecord = false;
+  if (bestScoreEl) {
+    bestScoreEl.textContent = String(bestScore);
+  }
 
   const cells = Array.from({ length: BOARD_SIZE }, () => Array(BOARD_SIZE));
   allCells.forEach((cell) => {
@@ -60,6 +71,46 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
     }
+  }
+
+  function readStoredBestScore() {
+    try {
+      const storedScore = Number(localStorage.getItem(BEST_SCORE_KEY) || 0);
+      return Number.isFinite(storedScore) && storedScore > 0 ? storedScore : 0;
+    } catch (_err) {
+      return 0;
+    }
+  }
+
+  function persistBestScore(value) {
+    try {
+      localStorage.setItem(BEST_SCORE_KEY, String(value));
+    } catch (_err) {
+      // Private browsing or blocked storage: keep the record for this session only.
+    }
+  }
+
+  function updateBestScore(currentScore) {
+    const nextScore = Number(currentScore) || 0;
+    if (nextScore <= bestScore) {
+      return false;
+    }
+
+    bestScore = nextScore;
+    currentGameHasNewRecord = true;
+    persistBestScore(bestScore);
+
+    if (bestScoreEl) {
+      bestScoreEl.textContent = String(bestScore);
+      const bestScoreBlock = bestScoreEl.parentElement;
+      if (bestScoreBlock) {
+        bestScoreBlock.classList.remove('is-new-record');
+        void bestScoreBlock.offsetWidth;
+        bestScoreBlock.classList.add('is-new-record');
+      }
+    }
+
+    return true;
   }
 
   async function playMoveAnimation(data) {
@@ -138,11 +189,19 @@ document.addEventListener('DOMContentLoaded', () => {
   function setScoreFromServer(total) {
     score = total;
     scoreEl.textContent = `Счёт: ${score}`;
+    updateBestScore(score);
   }
 
   function showGameOverModal(finalScore) {
     if (!gameOverModal) {
       return;
+    }
+
+    const isNewRecord = updateBestScore(finalScore) || currentGameHasNewRecord;
+    if (gameOverTitleEl) {
+      gameOverTitleEl.textContent = isNewRecord
+        ? `Новый рекорд! ${defaultGameOverTitle}`
+        : defaultGameOverTitle;
     }
 
     if (gameOverScoreEl) {
@@ -187,6 +246,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const data = await response.json();
       board = data.board;
       const nextScore = data.score ?? 0;
+      currentGameHasNewRecord = false;
       setScoreFromServer(nextScore);
       renderBoard(board);
       applyGameOverState(Boolean(data.gameOver), nextScore);
