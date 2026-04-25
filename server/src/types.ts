@@ -17,6 +17,8 @@ export interface MoveRequest {
 export interface MoveAnimationRound {
   matched: { row: number; col: number }[]
   boardAfter: Board
+  multiplier: number
+  roundScore: number
 }
 
 export interface MoveResponse {

@@ -91,15 +91,24 @@ router.post("/api/move", (req, res) => {
   let gainedThisMove = 0
 
   const rounds: MoveAnimationRound[] = []
+  let roundIndex = 0
 
   while (true) {
     const matched = collectCellsToRemove(workingBoard)
     if (matched.length === 0) {
       break
     }
-    gainedThisMove += calculateScore(workingBoard)
+    roundIndex += 1
+    const baseScore = calculateScore(workingBoard)
+    const roundScore = baseScore * roundIndex
+    gainedThisMove += roundScore
     workingBoard = addNewElements(removeAllTriples(workingBoard))
-    rounds.push({ matched, boardAfter: cloneBoard(workingBoard) })
+    rounds.push({
+      matched,
+      boardAfter: cloneBoard(workingBoard),
+      multiplier: roundIndex,
+      roundScore,
+    })
   }
 
   board = workingBoard
