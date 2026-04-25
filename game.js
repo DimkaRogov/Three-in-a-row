@@ -19,12 +19,15 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   const API_BASE = resolveApiBase();
 
-  const SWAP_PAUSE_MS = 200;
+  const SWAP_ANIMATION_MS = 280;
+  const SWAP_PAUSE_MS = 120;
+  const INVALID_SWAP_PAUSE_MS = 70;
   const MATCH_CLEAR_MS = 540;
   const LAND_MS = 320;
   const CELL_CLASS_NAMES = ['cell-1', 'cell-2', 'cell-3', 'cell-4', 'cell-5'];
 
   const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+  const nextFrame = () => new Promise((resolve) => requestAnimationFrame(resolve));
 
   let board = [];
   let score = 0;
@@ -58,6 +61,57 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   const cellKey = (row, col) => `${row}:${col}`;
+
+  function shouldReduceMotion() {
+    return window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+  }
+
+  function getCellByPosition(pos) {
+    return cells[pos.row]?.[pos.col] ?? null;
+  }
+
+  function resetSwapCell(cell) {
+    cell.classList.remove('is-swapping');
+    cell.style.removeProperty('--swap-x');
+    cell.style.removeProperty('--swap-y');
+  }
+
+  function commitAnimatedBoard(nextBoard, movingCells) {
+    boardEl.classList.add('is-swap-committing');
+    renderBoard(nextBoard);
+    movingCells.forEach(resetSwapCell);
+    void boardEl.offsetWidth;
+    boardEl.classList.remove('is-swap-committing');
+  }
+
+  async function animateSwapToBoard(nextBoard, move) {
+    const first = move ? getCellByPosition({ row: move.row1, col: move.col1 }) : null;
+    const second = move ? getCellByPosition({ row: move.row2, col: move.col2 }) : null;
+
+    if (!first || !second || shouldReduceMotion()) {
+      board = nextBoard;
+      renderBoard(board);
+      await delay(shouldReduceMotion() ? 0 : SWAP_PAUSE_MS);
+      return;
+    }
+
+    const firstRect = first.getBoundingClientRect();
+    const secondRect = second.getBoundingClientRect();
+
+    first.style.setProperty('--swap-x', `${secondRect.left - firstRect.left}px`);
+    first.style.setProperty('--swap-y', `${secondRect.top - firstRect.top}px`);
+    second.style.setProperty('--swap-x', `${firstRect.left - secondRect.left}px`);
+    second.style.setProperty('--swap-y', `${firstRect.top - secondRect.top}px`);
+
+    await nextFrame();
+    first.classList.add('is-swapping');
+    second.classList.add('is-swapping');
+
+    await delay(SWAP_ANIMATION_MS);
+
+    board = nextBoard;
+    commitAnimatedBoard(board, [first, second]);
+  }
 
   function getAffectedLandingCells(matched) {
     const lowestMatchedRowByCol = new Map();
@@ -137,14 +191,16 @@ document.addEventListener('DOMContentLoaded', () => {
     return true;
   }
 
-  async function playMoveAnimation(data) {
+  async function playMoveAnimation(data, move) {
     const { board: finalBoard, score: finalScore, animation, reverted } = data;
 
     if (!animation || !Array.isArray(animation.rounds) || animation.rounds.length === 0) {
       if (reverted && animation?.boardAfterSwap) {
-        board = animation.boardAfterSwap;
-        renderBoard(board);
-        await delay(SWAP_PAUSE_MS);
+        await animateSwapToBoard(animation.boardAfterSwap, move);
+        await delay(INVALID_SWAP_PAUSE_MS);
+        await animateSwapToBoard(finalBoard, move);
+      } else if (animation?.boardAfterSwap) {
+        await animateSwapToBoard(animation.boardAfterSwap, move);
       }
 
       board = finalBoard;
@@ -156,8 +212,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const { boardAfterSwap, rounds } = animation;
 
-    board = boardAfterSwap;
-    renderBoard(board);
+    await animateSwapToBoard(boardAfterSwap, move);
     await delay(SWAP_PAUSE_MS);
 
     for (let i = 0; i < rounds.length; i += 1) {
@@ -361,7 +416,7 @@ document.addEventListener('DOMContentLoaded', () => {
         throw new Error(`HTTP ${response.status}`);
       }
       const data = await response.json();
-      await playMoveAnimation(data);
+      await playMoveAnimation(data, { row1, col1, row2, col2 });
     } catch (_err) {
       scoreEl.textContent = 'Ошибка хода. Проверьте сервер.';
     } finally {
