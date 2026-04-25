@@ -1,6 +1,11 @@
 import express = require("express")
 import game = require("./game")
-import type { Board, MoveRequest } from "./types"
+import type {
+  Board,
+  MoveAnimationRound,
+  MoveRequest,
+  MoveResponse,
+} from "./types"
 
 const router = express.Router()
 const {
@@ -68,14 +73,24 @@ router.post("/api/move", (req, res) => {
       .json({ error: `row/col must be in [0, ${BOARD_SIZE - 1}]` })
   }
 
+  const preSwapBoard = cloneBoard(board)
   let workingBoard = swapCells(board, r1, c1, r2, c2)
   const boardAfterSwap = cloneBoard(workingBoard)
+  const initialMatches = collectCellsToRemove(workingBoard)
+
+  if (initialMatches.length === 0) {
+    const response: MoveResponse = {
+      board: preSwapBoard,
+      score,
+      reverted: true,
+      animation: { boardAfterSwap, rounds: [] },
+    }
+    return res.json(response)
+  }
+
   let gainedThisMove = 0
 
-  const rounds: {
-    matched: { row: number; col: number }[]
-    boardAfter: Board
-  }[] = []
+  const rounds: MoveAnimationRound[] = []
 
   while (true) {
     const matched = collectCellsToRemove(workingBoard)
@@ -90,11 +105,14 @@ router.post("/api/move", (req, res) => {
   board = workingBoard
   score += gainedThisMove
 
-  res.json({
+  const response: MoveResponse = {
     board,
     score,
+    reverted: false,
     animation: { boardAfterSwap, rounds },
-  })
+  }
+
+  res.json(response)
 })
 
 router.get("/api/score", (_req, res) => {
