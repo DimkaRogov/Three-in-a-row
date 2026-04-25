@@ -220,6 +220,16 @@ body {
   background: radial-gradient(circle at 35% 30%, #fff3a0 0%, #ffd60a 45%, #e6a800 100%);
 }
 
+/* Тип 4 — зелёный круг */
+.cell-4::before {
+  background: radial-gradient(circle at 35% 30%, #9cffcb 0%, #2dd36f 45%, #15803d 100%);
+}
+
+/* Тип 5 — фиолетовый круг */
+.cell-5::before {
+  background: radial-gradient(circle at 35% 30%, #d8b4fe 0%, #9d4edd 45%, #6b21a8 100%);
+}
+
 /* Выбранная фишка */
 .selected {
   outline: 3px solid white;

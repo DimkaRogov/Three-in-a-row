@@ -22,6 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const SWAP_PAUSE_MS = 200;
   const MATCH_CLEAR_MS = 540;
   const LAND_MS = 320;
+  const CELL_CLASS_NAMES = ['cell-1', 'cell-2', 'cell-3', 'cell-4', 'cell-5'];
 
   const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -62,11 +63,11 @@ document.addEventListener('DOMContentLoaded', () => {
       for (let col = 0; col < BOARD_SIZE; col++) {
         const cell = cells[row][col];
         const value = currentBoard[row][col];
-        cell.classList.remove('cell-1', 'cell-2', 'cell-3', 'selected', 'matched', 'cell-land');
-        if (value >= 1 && value <= 3) {
+        cell.classList.remove(...CELL_CLASS_NAMES, 'selected', 'matched', 'cell-land');
+        if (value >= 1 && value <= CELL_CLASS_NAMES.length) {
           cell.classList.add(`cell-${value}`);
         }
-        if (landing && value >= 1 && value <= 3) {
+        if (landing && value >= 1 && value <= CELL_CLASS_NAMES.length) {
           cell.classList.add('cell-land');
         }
       }

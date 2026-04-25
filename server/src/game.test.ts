@@ -18,12 +18,12 @@ describe("game logic", () => {
     expect(board.every((row: number[]) => row.length === 6)).toBe(true)
   })
 
-  it("generateBoard fills cells with 1, 2, or 3 only", () => {
+  it("generateBoard fills cells with 1, 2, 3, 4, or 5 only", () => {
     for (let i = 0; i < 10; i += 1) {
       const board = generateBoard()
       for (const row of board) {
         for (const v of row) {
-          expect([1, 2, 3] as const).toContainEqual(v)
+          expect([1, 2, 3, 4, 5] as const).toContainEqual(v)
         }
       }
     }
