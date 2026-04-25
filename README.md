@@ -4,6 +4,8 @@
 ![Deploy Pages](https://github.com/DimkaRogov/Three-in-a-row/actions/workflows/deploy-pages.yml/badge.svg)
 ![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)
 ![Node.js](https://img.shields.io/badge/node-%3E%3D20-339933?logo=node.js&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)
+![Haskell](https://img.shields.io/badge/Haskell-5D4F85?logo=haskell&logoColor=white)
 
 Live Demo: [https://dimkarogov.github.io/Three-in-a-row/](https://dimkarogov.github.io/Three-in-a-row/)
 
@@ -11,10 +13,11 @@ Live Demo: [https://dimkarogov.github.io/Three-in-a-row/](https://dimkarogov.git
 > Backend развернут на Render `Free plan`, поэтому после простоя возможен cold start.
 > Если игра не загрузилась сразу, подождите примерно `30-60 секунд` и обновите страницу.
 
-Проект с игрой "Три в ряд", доступной в двух версиях: консольной и браузерной.
+Проект с игрой "Три в ряд", доступной в двух версиях: консольной (Haskell) и браузерной (SPA + REST API на TypeScript/Express).
 
 ## Содержание
 
+- [Геймплей](#геймплей)
 - [Архитектура](#архитектура)
 - [Tech Stack](#tech-stack)
 - [Скриншоты](#скриншоты)
@@ -25,6 +28,22 @@ Live Demo: [https://dimkarogov.github.io/Three-in-a-row/](https://dimkarogov.git
 - [Deploy](#deploy)
 - [CI](#ci)
 - [Структура проекта](#структура-проекта)
+- [Contributing](#contributing)
+- [License](#license)
+
+## Геймплей
+
+- Поле `6x6`, три типа фишек со значениями `1`, `2`, `3`.
+- Чтобы сделать ход, нужно поменять местами две **соседние** клетки (по горизонтали или вертикали).
+- Если после обмена не образуется ряд из трёх и более одинаковых фишек, ход откатывается.
+- Совпавшие фишки удаляются, оставшиеся падают вниз, сверху появляются новые. Если возникают новые совпадения — запускается каскад с возрастающим множителем очков.
+- Игра завершается, когда не остаётся ни одного хода, создающего совпадение. Лучший результат сохраняется в `localStorage` браузера.
+
+### Управление (браузерная версия)
+
+- Клик по клетке выделяет её, клик по соседней — выполняет обмен.
+- Повторный клик по той же клетке снимает выделение.
+- Кнопка **«Новая игра»** сбрасывает поле (с подтверждением, если есть очки).
 
 ## Архитектура
 
@@ -42,18 +61,21 @@ flowchart LR
     haskellCli --> gameCore
 ```
 
+Игровая логика в браузерной версии живёт на сервере: клиент только отправляет ходы и анимирует ответы.
+
 ## Tech Stack
 
-- Frontend: `HTML`, `CSS`, `Vanilla JavaScript`
-- Backend: `Node.js`, `Express`, `TypeScript`
+- Frontend: `HTML`, `CSS`, `Vanilla JavaScript` (без фреймворков)
+- Backend: `Node.js` (>=20), `Express 5`, `TypeScript`
 - Tests: `Vitest`
 - Lint/Format: `ESLint`, `Prettier`
-- CI/CD: `GitHub Actions`, `GitHub Pages`
+- CI/CD: `GitHub Actions`, `GitHub Pages`, `Render`
 - CLI version: `Haskell` + `Cabal`
+- Контейнеризация: `Docker` (multi-stage, Node 22 Alpine)
 
 ## Скриншоты
 
-- `docs/screenshot.png` — основной экран игры.
+![Скриншот игры](docs/screenshot.png)
 
 ## Консольная версия (Haskell)
 
@@ -62,8 +84,9 @@ flowchart LR
 - Поле `6x6` с числами от `1` до `3`
 - Обмен только соседних элементов
 - Поиск горизонтальных и вертикальных троек
-- Удаление троек и генерация новых элементов
-- Подсчёт очков
+- Удаление совпадений и генерация новых элементов
+- Подсчёт очков (`10` за каждую убранную фишку)
+- Ввод хода — четыре числа через пробел (`row1 col1 row2 col2`, индексация с 1)
 - Выход из игры по команде `q`
 
 ### Требования
@@ -94,34 +117,52 @@ npm ci
 npm run dev
 ```
 
-Сервер слушает `http://localhost:3000`.
+Сервер слушает `http://localhost:3000`. Порт можно переопределить через переменную окружения `PORT`.
+
+### NPM-скрипты
+
+| Скрипт | Описание |
+|--------|----------|
+| `npm run dev` | Запуск dev-сервера через `ts-node` |
+| `npm run build` | Компиляция TypeScript в `dist/` |
+| `npm start` | Запуск собранной версии (`node dist/index.js`) |
+| `npm test` | Юнит-тесты на `Vitest` |
+| `npm run lint` | Проверка `ESLint` |
+| `npm run format` | Форматирование через `Prettier` |
 
 ### API
 
-- `POST /api/new-game` — создать новое поле и сбросить счёт
-- `GET /api/board` — получить текущее поле и счёт (без изменения состояния)
-- `POST /api/move` — выполнить ход `{ row1, col1, row2, col2 }`
-- `GET /api/score` — получить текущий счёт
+| Метод | Путь | Описание |
+|-------|------|----------|
+| `POST` | `/api/new-game` | Создать новое поле и сбросить счёт |
+| `GET` | `/api/board` | Получить текущее поле и счёт |
+| `POST` | `/api/move` | Выполнить ход `{ row1, col1, row2, col2 }` |
+| `GET` | `/api/score` | Получить текущий счёт |
 
-Очки за ход считаются по каскадам: первый сброс даёт `10` очков за каждую
-убранную фишку, второй умножается на `2`, третий на `3` и так далее.
-После каждого хода сервер проверяет, остались ли возможные обмены; если ходов
-нет, ответы `/api/board`, `/api/new-game` и `/api/move` возвращают
-`gameOver: true`.
+Ответ `/api/move` содержит:
+- `board` — финальное состояние поля
+- `score` — обновлённый счёт
+- `rounds` — пошаговая анимация каскадов (для клиента)
+- `reverted: true` — если обмен не дал совпадений и был откатан
+- `gameOver: true` — если возможных ходов не осталось
+
+Очки за ход считаются по каскадам: первый сброс даёт `10` очков за каждую убранную фишку, второй умножается на `2`, третий на `3` и так далее. После наступления `gameOver` повторный ход вернёт `409 Conflict`.
 
 ## Браузерная версия (HTML/CSS/JS)
 
-1. Запустите backend (`npm run dev` в `server/`)
-2. Откройте `index.html` в браузере
+1. Запустите backend (`npm run dev` в `server/`).
+2. Откройте `index.html` в браузере (можно через любой статический сервер или напрямую как файл).
 
-По умолчанию фронт ходит в `http://localhost:3000`.
+По умолчанию при `localhost`/`127.0.0.1` фронт автоматически использует `http://localhost:3000`.
 
 Для прод-режима endpoint задаётся через `config.prod.js`:
 
 ```js
-// Замените your-backend-url на URL вашего APII
+// Замените your-backend-url на URL вашего API
 window.__API_BASE__ = "https://your-backend-url.onrender.com"
 ```
+
+Лучший результат хранится в `localStorage` под ключом `tree-in-a-row:bestScore:v1`.
 
 ## Docker
 
@@ -154,28 +195,48 @@ curl http://localhost:3000/
 
 ### Backend (Render)
 
-В репозитории есть `render.yaml`.
+В репозитории есть `render.yaml` — можно подключить как Blueprint.
 
 Вариант через UI Render:
-1. New Web Service -> подключить репозиторий
-2. Root Directory: `server`
-3. Build Command: `npm ci && npm run build`
-4. Start Command: `node dist/index.js`
+1. **New Web Service** → подключить репозиторий
+2. **Root Directory**: `server`
+3. **Build Command**: `npm ci && npm run build`
+4. **Start Command**: `node dist/index.js`
+5. **Environment**: Node `22`
 
 ## CI
 
-Workflow `.github/workflows/ci.yml` запускает:
-- backend lint/build/test (Node 20 и 22)
-- haskell smoke build (`cabal build`)
+Workflow `.github/workflows/ci.yml` запускается на push в `main` и pull request:
+
+- backend `lint` / `build` / `test` на матрице Node `20` и `22`
+- haskell smoke build (`cabal build`) на GHC `9.6`
 
 ## Структура проекта
 
-- `main.hs` — логика консольной версии на Haskell
-- `tree-in-a-row.cabal` — конфигурация Cabal-проекта
-- `index.html`, `style.css`, `game.js` — браузерный клиент
-- `config.prod.js` — настройка API endpoint для production
-- `server/` — backend на Node.js + TypeScript
-  - `server/src/index.ts` — точка входа
-  - `server/src/game.ts` — игровая логика
-  - `server/src/routes.ts` — API маршруты
-  - `server/src/types.ts` — типы данных
+```
+.
+├── main.hs                  # Консольная версия на Haskell
+├── tree-in-a-row.cabal      # Конфигурация Cabal-проекта
+├── index.html               # Браузерный клиент
+├── style.css
+├── game.js
+├── config.prod.js           # API endpoint для production
+├── server/                  # Backend на Node.js + TypeScript
+│   ├── src/index.ts         # Точка входа Express
+│   ├── src/routes.ts        # REST-маршруты, состояние игры
+│   ├── src/game.ts          # Игровая логика (поле, гравитация, очки)
+│   ├── src/types.ts         # Общие типы API
+│   ├── src/game.test.ts     # Vitest-тесты
+│   └── Dockerfile
+├── render.yaml              # Blueprint для Render
+├── docs/screenshot.png
+└── .github/workflows/       # CI и Deploy Pages
+```
+
+## Contributing
+
+См. [CONTRIBUTING.md](CONTRIBUTING.md). Перед PR прогоните `npm run lint`, `npm run build` и `npm test` в `server/`.
+
+## License
+
+[MIT](LICENSE) © 2026 DimkaRogov
