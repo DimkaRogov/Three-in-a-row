@@ -151,4 +151,35 @@ describe("game logic", () => {
     ]
     expect(calculateScore(board)).toBe(30)
   })
+
+  it("applies cascade score multipliers by round", () => {
+    const cascadeBoards: Board[] = [
+      [
+        [1, 1, 1, 2, 3, 2],
+        [2, 3, 1, 2, 3, 1],
+        [3, 1, 2, 3, 1, 2],
+        [1, 2, 3, 1, 2, 3],
+        [2, 3, 1, 2, 3, 1],
+        [3, 1, 2, 3, 1, 2],
+      ],
+      [
+        [2, 2, 2, 1, 3, 1],
+        [1, 3, 2, 3, 1, 2],
+        [3, 1, 3, 2, 3, 1],
+        [2, 3, 1, 3, 2, 3],
+        [1, 2, 3, 1, 3, 2],
+        [3, 1, 2, 3, 1, 3],
+      ],
+    ]
+
+    const roundScores = cascadeBoards.map((roundBoard, index) => {
+      const multiplier = index + 1
+      return calculateScore(roundBoard) * multiplier
+    })
+
+    expect(roundScores).toEqual([30, 60])
+    expect(roundScores.reduce((total, roundScore) => total + roundScore, 0)).toBe(
+      90
+    )
+  })
 })

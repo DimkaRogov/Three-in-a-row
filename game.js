@@ -30,6 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const boardEl = document.querySelector('.board');
   const scoreEl = document.querySelector('.score');
+  const stageEl = document.querySelector('.stage');
   const allCells = Array.from(boardEl.querySelectorAll('.cell'));
 
   const cells = Array.from({ length: BOARD_SIZE }, () => Array(BOARD_SIZE));
@@ -92,6 +93,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
 
+      if (round.multiplier >= 2) {
+        showComboBadge(round.multiplier);
+      }
+
       await delay(MATCH_CLEAR_MS);
 
       board = round.boardAfter;
@@ -103,6 +108,24 @@ document.addEventListener('DOMContentLoaded', () => {
     board = finalBoard;
     setScoreFromServer(finalScore);
     renderBoard(board);
+  }
+
+  function showComboBadge(n) {
+    if (!stageEl) {
+      return;
+    }
+
+    const badge = document.createElement('div');
+    badge.className = 'combo-badge';
+    badge.textContent = `Combo x${n}!`;
+    stageEl.appendChild(badge);
+    badge.addEventListener(
+      'animationend',
+      () => {
+        badge.remove();
+      },
+      { once: true },
+    );
   }
 
   function setScoreFromServer(total) {

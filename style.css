@@ -210,6 +210,21 @@ body {
   animation: explode 0.52s ease-in forwards;
 }
 
+.combo-badge {
+  position: absolute;
+  left: 50%;
+  top: 30%;
+  transform: translate(-50%, -50%) scale(0.6);
+  font-size: clamp(1.4rem, 4vw, 2.4rem);
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  color: #ffd60a;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+  pointer-events: none;
+  animation: comboPop 0.9s ease-out forwards;
+  z-index: 10;
+}
+
 @keyframes explode {
   0% {
     transform: scale(1);
@@ -228,6 +243,21 @@ body {
     opacity: 0;
     filter: brightness(1);
     box-shadow: inset 0 0 0 0 rgba(255, 230, 150, 0);
+  }
+}
+
+@keyframes comboPop {
+  0% {
+    transform: translate(-50%, -50%) scale(0.4);
+    opacity: 0;
+  }
+  25% {
+    transform: translate(-50%, -50%) scale(1.2);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -130%) scale(1);
+    opacity: 0;
   }
 }
 
