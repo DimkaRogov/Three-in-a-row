@@ -57,8 +57,31 @@ document.addEventListener('DOMContentLoaded', () => {
     cells[row][col] = cell;
   });
 
+  const cellKey = (row, col) => `${row}:${col}`;
+
+  function getAffectedLandingCells(matched) {
+    const lowestMatchedRowByCol = new Map();
+
+    for (const pos of matched) {
+      const { row, col } = pos;
+      const previousRow = lowestMatchedRowByCol.get(col);
+      if (previousRow === undefined || row > previousRow) {
+        lowestMatchedRowByCol.set(col, row);
+      }
+    }
+
+    const affectedCells = new Set();
+    for (const [col, lowestRow] of lowestMatchedRowByCol) {
+      for (let row = 0; row <= lowestRow; row += 1) {
+        affectedCells.add(cellKey(row, col));
+      }
+    }
+
+    return affectedCells;
+  }
+
   function renderBoard(currentBoard, options = {}) {
-    const { landing = false } = options;
+    const { landingCells = new Set() } = options;
     for (let row = 0; row < BOARD_SIZE; row++) {
       for (let col = 0; col < BOARD_SIZE; col++) {
         const cell = cells[row][col];
@@ -67,7 +90,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (value >= 1 && value <= CELL_CLASS_NAMES.length) {
           cell.classList.add(`cell-${value}`);
         }
-        if (landing && value >= 1 && value <= CELL_CLASS_NAMES.length) {
+        if (landingCells.has(cellKey(row, col)) && value >= 1 && value <= CELL_CLASS_NAMES.length) {
           cell.classList.add('cell-land');
         }
       }
@@ -158,7 +181,7 @@ document.addEventListener('DOMContentLoaded', () => {
       await delay(MATCH_CLEAR_MS);
 
       board = round.boardAfter;
-      renderBoard(round.boardAfter, { landing: true });
+      renderBoard(round.boardAfter, { landingCells: getAffectedLandingCells(round.matched) });
       await delay(LAND_MS);
       allCells.forEach((cell) => cell.classList.remove('cell-land'));
     }
