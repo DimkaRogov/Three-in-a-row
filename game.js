@@ -27,10 +27,14 @@ document.addEventListener('DOMContentLoaded', () => {
   let score = 0;
   let selectedCell = null;
   let boardLocked = false;
+  let gameOver = false;
 
   const boardEl = document.querySelector('.board');
   const scoreEl = document.querySelector('.score');
   const stageEl = document.querySelector('.stage');
+  const gameOverModal = document.getElementById('game-over-modal');
+  const gameOverScoreEl = document.getElementById('game-over-score');
+  const gameOverNewGameBtn = document.getElementById('game-over-new-game');
   const allCells = Array.from(boardEl.querySelectorAll('.cell'));
 
   const cells = Array.from({ length: BOARD_SIZE }, () => Array(BOARD_SIZE));
@@ -70,6 +74,7 @@ document.addEventListener('DOMContentLoaded', () => {
       board = finalBoard;
       setScoreFromServer(finalScore);
       renderBoard(board);
+      applyGameOverState(Boolean(data.gameOver), finalScore);
       return;
     }
 
@@ -108,6 +113,7 @@ document.addEventListener('DOMContentLoaded', () => {
     board = finalBoard;
     setScoreFromServer(finalScore);
     renderBoard(board);
+    applyGameOverState(Boolean(data.gameOver), finalScore);
   }
 
   function showComboBadge(n) {
@@ -133,6 +139,41 @@ document.addEventListener('DOMContentLoaded', () => {
     scoreEl.textContent = `Счёт: ${score}`;
   }
 
+  function showGameOverModal(finalScore) {
+    if (!gameOverModal) {
+      return;
+    }
+
+    if (gameOverScoreEl) {
+      gameOverScoreEl.textContent = String(finalScore);
+    }
+
+    gameOverModal.hidden = false;
+    gameOverModal.classList.add('is-open');
+    gameOverNewGameBtn?.focus();
+  }
+
+  function hideGameOverModal() {
+    if (!gameOverModal) {
+      return;
+    }
+
+    gameOverModal.classList.remove('is-open');
+    gameOverModal.hidden = true;
+  }
+
+  function applyGameOverState(isGameOver, finalScore) {
+    gameOver = isGameOver;
+
+    if (gameOver) {
+      boardLocked = true;
+      showGameOverModal(finalScore);
+      return;
+    }
+
+    hideGameOverModal();
+  }
+
   async function fetchBoard() {
     boardLocked = true;
     try {
@@ -144,8 +185,10 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       const data = await response.json();
       board = data.board;
-      setScoreFromServer(data.score ?? 0);
+      const nextScore = data.score ?? 0;
+      setScoreFromServer(nextScore);
       renderBoard(board);
+      applyGameOverState(Boolean(data.gameOver), nextScore);
     } catch (_err) {
       if (API_BASE === '' && !['localhost', '127.0.0.1', ''].includes(location.hostname)) {
         scoreEl.textContent =
@@ -155,7 +198,7 @@ document.addEventListener('DOMContentLoaded', () => {
           'Не удалось загрузить поле. Проверьте, что бэкенд на Render запущен и CORS/URL верны: ' + API_BASE;
       }
     } finally {
-      boardLocked = false;
+      boardLocked = gameOver;
     }
   }
 
@@ -208,6 +251,10 @@ document.addEventListener('DOMContentLoaded', () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ row1, col1, row2, col2 }),
       });
+      if (response.status === 409) {
+        applyGameOverState(true, score);
+        return;
+      }
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
       }
@@ -216,11 +263,15 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (_err) {
       scoreEl.textContent = 'Ошибка хода. Проверьте сервер.';
     } finally {
-      boardLocked = false;
+      boardLocked = gameOver;
     }
   }
 
   fetchBoard();
+
+  gameOverNewGameBtn?.addEventListener('click', () => {
+    fetchBoard();
+  });
 
   allCells.forEach((cell) => {
     cell.addEventListener('click', () => {
