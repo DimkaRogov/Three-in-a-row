@@ -57,9 +57,15 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   async function playMoveAnimation(data) {
-    const { board: finalBoard, score: finalScore, animation } = data;
+    const { board: finalBoard, score: finalScore, animation, reverted } = data;
 
     if (!animation || !Array.isArray(animation.rounds) || animation.rounds.length === 0) {
+      if (reverted && animation?.boardAfterSwap) {
+        board = animation.boardAfterSwap;
+        renderBoard(board);
+        await delay(SWAP_PAUSE_MS);
+      }
+
       board = finalBoard;
       setScoreFromServer(finalScore);
       renderBoard(board);

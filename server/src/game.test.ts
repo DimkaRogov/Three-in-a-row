@@ -57,6 +57,20 @@ describe("game logic", () => {
     expect(swapped).toEqual(board)
   })
 
+  it("collectCellsToRemove stays empty after a non-matching swap", () => {
+    const board: Board = [
+      [1, 2, 3, 1, 2, 3],
+      [2, 3, 1, 2, 3, 1],
+      [3, 1, 2, 3, 1, 2],
+      [1, 2, 3, 1, 2, 3],
+      [2, 3, 1, 2, 3, 1],
+      [3, 1, 2, 3, 1, 2],
+    ]
+
+    const swapped = swapCells(board, 0, 0, 0, 1)
+    expect(collectCellsToRemove(swapped)).toEqual([])
+  })
+
   it("collectCellsToRemove finds horizontal triples", () => {
     const board: Board = [
       [1, 1, 1, 2, 3, 2],

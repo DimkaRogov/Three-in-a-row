@@ -13,3 +13,18 @@ export interface MoveRequest {
   row2: number
   col2: number
 }
+
+export interface MoveAnimationRound {
+  matched: { row: number; col: number }[]
+  boardAfter: Board
+}
+
+export interface MoveResponse {
+  board: Board
+  score: number
+  reverted: boolean
+  animation: {
+    boardAfterSwap: Board
+    rounds: MoveAnimationRound[]
+  }
+}
