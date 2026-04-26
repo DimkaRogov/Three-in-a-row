@@ -5,6 +5,7 @@ export type Board = Row[]
 export interface GameState {
   board: Board
   score: number
+  movesLeft: number
 }
 
 export interface BoardResponse extends GameState {
@@ -36,6 +37,7 @@ export interface MoveAnimationRound {
 export interface MoveResponse {
   board: Board
   score: number
+  movesLeft: number
   gameOver: boolean
   reverted: boolean
   hint?: MoveHint | null
