@@ -216,8 +216,8 @@ describe("game logic", () => {
     })
 
     expect(roundScores).toEqual([30, 60])
-    expect(roundScores.reduce((total, roundScore) => total + roundScore, 0)).toBe(
-      90
-    )
+    expect(
+      roundScores.reduce((total, roundScore) => total + roundScore, 0)
+    ).toBe(90)
   })
 })

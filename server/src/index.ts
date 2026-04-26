@@ -1,13 +1,13 @@
 import cors = require("cors")
 import express = require("express")
-import routes = require("./routes")
+import createGameRouter = require("./routes")
 
 const app = express()
 const PORT = Number(process.env.PORT || 3000)
 
 app.use(cors())
 app.use(express.json())
-app.use(routes)
+app.use(createGameRouter())
 
 app.get("/", (_req, res) => {
   res.send("Server is running")
