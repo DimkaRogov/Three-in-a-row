@@ -35,6 +35,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   let board = [];
   let score = 0;
+  let movesLeft = 0;
+  let initialMovesLeft = 0;
   let selectedCell = null;
   let focusedCellPosition = { row: 0, col: 0 };
   let boardLocked = false;
@@ -46,6 +48,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const boardEl = document.querySelector('.board');
   const scoreEl = document.querySelector('.score');
+  const movesLeftEl = document.getElementById('moves-left');
   const bestScoreEl = document.getElementById('best-score-value');
   const highContrastToggle = document.getElementById('high-contrast-toggle');
   const hintBtn = document.getElementById('hint-btn');
@@ -57,6 +60,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const gameOverModal = document.getElementById('game-over-modal');
   const gameOverTitleEl = document.getElementById('game-over-title');
   const gameOverScoreEl = document.getElementById('game-over-score');
+  const gameOverReasonEl = document.getElementById('game-over-reason');
   const gameOverNewGameBtn = document.getElementById('game-over-new-game');
   const allCells = Array.from(boardEl.querySelectorAll('.cell'));
   const defaultGameOverTitle = gameOverTitleEl?.textContent || 'Игра окончена';
@@ -460,7 +464,13 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   async function playMoveAnimation(data, move) {
-    const { board: finalBoard, score: finalScore, animation, reverted } = data;
+    const {
+      board: finalBoard,
+      score: finalScore,
+      movesLeft: finalMovesLeft,
+      animation,
+      reverted,
+    } = data;
     clearHintHighlight();
 
     if (!animation || !Array.isArray(animation.rounds) || animation.rounds.length === 0) {
@@ -474,8 +484,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
       board = finalBoard;
       setScoreFromServer(finalScore);
+      setMovesLeftFromServer(finalMovesLeft);
       renderBoard(board);
-      applyGameOverState(Boolean(data.gameOver), finalScore);
+      applyGameOverState(Boolean(data.gameOver), finalScore, finalMovesLeft);
       setHintFromServer(data.hint);
       return;
     }
@@ -513,8 +524,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     board = finalBoard;
     setScoreFromServer(finalScore);
+    setMovesLeftFromServer(finalMovesLeft);
     renderBoard(board);
-    applyGameOverState(Boolean(data.gameOver), finalScore);
+    applyGameOverState(Boolean(data.gameOver), finalScore, finalMovesLeft);
     setHintFromServer(data.hint);
   }
 
@@ -545,20 +557,33 @@ document.addEventListener('DOMContentLoaded', () => {
     updateBestScore(score);
   }
 
+  function setMovesLeftFromServer(total) {
+    const nextMovesLeft = Number(total);
+    movesLeft = Number.isFinite(nextMovesLeft) ? Math.max(0, nextMovesLeft) : 0;
+
+    if (movesLeftEl) {
+      movesLeftEl.textContent = `Ходы: ${movesLeft}`;
+      movesLeftEl.classList.toggle('moves--low', movesLeft > 0 && movesLeft <= 5);
+    }
+  }
+
   function applyBoardData(data, options = {}) {
     const { resetRecord = false } = options;
     board = data.board;
     const nextScore = data.score ?? 0;
+    const nextMovesLeft = data.movesLeft ?? 0;
 
     if (resetRecord) {
       currentGameHasNewRecord = false;
+      initialMovesLeft = nextMovesLeft;
       clearSelectedCell();
       setFocusedCell(0, 0);
     }
 
     setScoreFromServer(nextScore);
+    setMovesLeftFromServer(nextMovesLeft);
     renderBoard(board);
-    applyGameOverState(Boolean(data.gameOver), nextScore);
+    applyGameOverState(Boolean(data.gameOver), nextScore, nextMovesLeft);
     setHintFromServer(data.hint);
   }
 
@@ -595,7 +620,7 @@ document.addEventListener('DOMContentLoaded', () => {
     showApiError('Ошибка хода. Проверьте сервер.');
   }
 
-  function showGameOverModal(finalScore) {
+  function showGameOverModal(finalScore, finalMovesLeft) {
     if (!gameOverModal) {
       return;
     }
@@ -609,6 +634,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (gameOverScoreEl) {
       gameOverScoreEl.textContent = String(finalScore);
+    }
+
+    if (gameOverReasonEl) {
+      gameOverReasonEl.textContent =
+        finalMovesLeft <= 0
+          ? 'Ходы закончились.'
+          : 'На поле не осталось ходов, создающих совпадение.';
     }
 
     gameOverModal.hidden = false;
@@ -625,13 +657,13 @@ document.addEventListener('DOMContentLoaded', () => {
     gameOverModal.hidden = true;
   }
 
-  function applyGameOverState(isGameOver, finalScore) {
+  function applyGameOverState(isGameOver, finalScore, finalMovesLeft = movesLeft) {
     gameOver = isGameOver;
 
     if (gameOver) {
       boardLocked = true;
       updateHintButtonState();
-      showGameOverModal(finalScore);
+      showGameOverModal(finalScore, finalMovesLeft);
       return;
     }
 
@@ -701,7 +733,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const { requireConfirmation = false } = options;
     if (
       requireConfirmation &&
-      score > 0 &&
+      (score > 0 || movesLeft < initialMovesLeft) &&
       !confirm('Начать новую игру? Текущий счёт будет сброшен.')
     ) {
       return;
