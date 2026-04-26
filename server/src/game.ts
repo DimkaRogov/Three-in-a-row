@@ -42,9 +42,13 @@ function wouldCreateStartingMatch(
   value: Cell
 ): boolean {
   const hasHorizontalMatch =
-    col >= 2 && board[row]?.[col - 1] === value && board[row]?.[col - 2] === value
+    col >= 2 &&
+    board[row]?.[col - 1] === value &&
+    board[row]?.[col - 2] === value
   const hasVerticalMatch =
-    row >= 2 && board[row - 1]?.[col] === value && board[row - 2]?.[col] === value
+    row >= 2 &&
+    board[row - 1]?.[col] === value &&
+    board[row - 2]?.[col] === value
 
   return hasHorizontalMatch || hasVerticalMatch
 }
