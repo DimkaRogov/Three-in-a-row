@@ -339,6 +339,21 @@ body {
   outline-offset: 4px;
 }
 
+.cell.cell-hint {
+  z-index: 5;
+  outline: 3px solid #ffd60a;
+  outline-offset: -3px;
+  animation: hintPulse 0.8s ease-in-out 2;
+}
+
+.cell.cell-hint::before {
+  filter: brightness(1.25) saturate(1.15);
+  box-shadow:
+    0 0 18px rgba(255, 214, 10, 0.65),
+    inset 0 -2px 6px rgba(0, 0, 0, 0.12),
+    inset 0 2px 8px rgba(255, 255, 255, 0.32);
+}
+
 .cell.is-swapping {
   z-index: 4;
 }
@@ -410,6 +425,16 @@ body {
   100% {
     transform: translate(-50%, -130%) scale(1);
     opacity: 0;
+  }
+}
+
+@keyframes hintPulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.08);
   }
 }
 

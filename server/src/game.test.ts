@@ -5,6 +5,7 @@ import type { Board } from "./types"
 const {
   calculateScore,
   collectCellsToRemove,
+  findValidMove,
   generateBoard,
   hasAnyValidMove,
   removeAllTriples,
@@ -26,6 +27,14 @@ describe("game logic", () => {
           expect([1, 2, 3, 4, 5] as const).toContainEqual(v)
         }
       }
+    }
+  })
+
+  it("generateBoard starts without matches and with a valid move", () => {
+    for (let i = 0; i < 20; i += 1) {
+      const board = generateBoard()
+      expect(collectCellsToRemove(board)).toEqual([])
+      expect(findValidMove(board)).not.toBeNull()
     }
   })
 
@@ -153,17 +162,8 @@ describe("game logic", () => {
     expect(calculateScore(board)).toBe(30)
   })
 
-  it("hasAnyValidMove returns true for a fresh random board with retry", () => {
-    let any = false
-
-    for (let i = 0; i < 5; i += 1) {
-      if (hasAnyValidMove(generateBoard())) {
-        any = true
-        break
-      }
-    }
-
-    expect(any).toBe(true)
+  it("hasAnyValidMove returns true for a fresh random board", () => {
+    expect(hasAnyValidMove(generateBoard())).toBe(true)
   })
 
   it("hasAnyValidMove returns false on a constructed dead board", () => {
@@ -173,6 +173,7 @@ describe("game logic", () => {
     ]
 
     expect(hasAnyValidMove(dead)).toBe(false)
+    expect(findValidMove(dead)).toBeNull()
   })
 
   it("hasAnyValidMove finds a move when a horizontal triple is one swap away", () => {
@@ -186,6 +187,7 @@ describe("game logic", () => {
     ]
 
     expect(hasAnyValidMove(board)).toBe(true)
+    expect(findValidMove(board)).toEqual({ row1: 0, col1: 2, row2: 1, col2: 2 })
   })
 
   it("applies cascade score multipliers by round", () => {

@@ -25,6 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const INVALID_SWAP_PAUSE_MS = 70;
   const MATCH_CLEAR_MS = 540;
   const LAND_MS = 320;
+  const HINT_HIGHLIGHT_MS = 1600;
   const CELL_CLASS_NAMES = ['cell-1', 'cell-2', 'cell-3', 'cell-4', 'cell-5'];
   const CELL_LABELS = ['фишка 1', 'фишка 2', 'фишка 3', 'фишка 4', 'фишка 5'];
 
@@ -38,10 +39,14 @@ document.addEventListener('DOMContentLoaded', () => {
   let boardLocked = false;
   let gameOver = false;
   let pendingRetryAction = null;
+  let apiLoading = false;
+  let currentHint = null;
+  let hintTimeoutId = null;
 
   const boardEl = document.querySelector('.board');
   const scoreEl = document.querySelector('.score');
   const bestScoreEl = document.getElementById('best-score-value');
+  const hintBtn = document.getElementById('hint-btn');
   const newGameBtn = document.getElementById('new-game-btn');
   const apiStatusEl = document.getElementById('api-status');
   const apiStatusMessageEl = document.getElementById('api-status-message');
@@ -122,6 +127,71 @@ document.addEventListener('DOMContentLoaded', () => {
     setSelectedCell(null);
   }
 
+  function isPositionInRange(row, col) {
+    return (
+      Number.isInteger(row) &&
+      Number.isInteger(col) &&
+      row >= 0 &&
+      row < BOARD_SIZE &&
+      col >= 0 &&
+      col < BOARD_SIZE
+    );
+  }
+
+  function isValidHint(hint) {
+    if (hint === null || typeof hint !== 'object') {
+      return false;
+    }
+
+    const { row1, col1, row2, col2 } = hint;
+    return (
+      isPositionInRange(row1, col1) &&
+      isPositionInRange(row2, col2) &&
+      Math.abs(row1 - row2) + Math.abs(col1 - col2) === 1
+    );
+  }
+
+  function clearHintHighlight() {
+    if (hintTimeoutId !== null) {
+      window.clearTimeout(hintTimeoutId);
+      hintTimeoutId = null;
+    }
+
+    allCells.forEach((cell) => cell.classList.remove('cell-hint'));
+  }
+
+  function updateHintButtonState() {
+    if (!hintBtn) {
+      return;
+    }
+
+    hintBtn.disabled =
+      apiLoading || boardLocked || gameOver || !isBoardReady() || currentHint === null;
+  }
+
+  function setHintFromServer(hint) {
+    clearHintHighlight();
+    currentHint = isValidHint(hint) ? hint : null;
+    updateHintButtonState();
+  }
+
+  function showHint() {
+    if (apiLoading || boardLocked || gameOver || !currentHint) {
+      return;
+    }
+
+    clearSelectedCell();
+    clearHintHighlight();
+
+    const hintedCells = [
+      cells[currentHint.row1]?.[currentHint.col1],
+      cells[currentHint.row2]?.[currentHint.col2],
+    ].filter(Boolean);
+
+    hintedCells.forEach((cell) => cell.classList.add('cell-hint'));
+    hintTimeoutId = window.setTimeout(clearHintHighlight, HINT_HIGHLIGHT_MS);
+  }
+
   function createApiTimeoutError() {
     const error = new Error(`API request exceeded ${API_TIMEOUT_MS}ms`);
     error.name = 'ApiTimeoutError';
@@ -195,6 +265,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function setApiLoading(isLoading, message = '') {
+    apiLoading = isLoading;
     boardEl.classList.toggle('is-loading', isLoading);
 
     if (newGameBtn) {
@@ -206,6 +277,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (apiRetryBtn) {
       apiRetryBtn.disabled = isLoading;
     }
+    updateHintButtonState();
 
     if (isLoading && message) {
       setApiStatus(message);
@@ -294,7 +366,7 @@ document.addEventListener('DOMContentLoaded', () => {
       for (let col = 0; col < BOARD_SIZE; col++) {
         const cell = cells[row][col];
         const value = currentBoard[row][col];
-        cell.classList.remove(...CELL_CLASS_NAMES, 'selected', 'matched', 'cell-land');
+        cell.classList.remove(...CELL_CLASS_NAMES, 'selected', 'matched', 'cell-land', 'cell-hint');
         if (value >= 1 && value <= CELL_CLASS_NAMES.length) {
           cell.classList.add(`cell-${value}`);
         }
@@ -352,6 +424,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   async function playMoveAnimation(data, move) {
     const { board: finalBoard, score: finalScore, animation, reverted } = data;
+    clearHintHighlight();
 
     if (!animation || !Array.isArray(animation.rounds) || animation.rounds.length === 0) {
       if (reverted && animation?.boardAfterSwap) {
@@ -366,6 +439,7 @@ document.addEventListener('DOMContentLoaded', () => {
       setScoreFromServer(finalScore);
       renderBoard(board);
       applyGameOverState(Boolean(data.gameOver), finalScore);
+      setHintFromServer(data.hint);
       return;
     }
 
@@ -404,6 +478,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setScoreFromServer(finalScore);
     renderBoard(board);
     applyGameOverState(Boolean(data.gameOver), finalScore);
+    setHintFromServer(data.hint);
   }
 
   function showComboBadge(n) {
@@ -447,6 +522,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setScoreFromServer(nextScore);
     renderBoard(board);
     applyGameOverState(Boolean(data.gameOver), nextScore);
+    setHintFromServer(data.hint);
   }
 
   function showNewGameError(error) {
@@ -517,16 +593,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (gameOver) {
       boardLocked = true;
+      updateHintButtonState();
       showGameOverModal(finalScore);
       return;
     }
 
     hideGameOverModal();
+    updateHintButtonState();
   }
 
   async function fetchBoard() {
     boardLocked = true;
     clearSelectedCell();
+    clearHintHighlight();
     setApiLoading(true, 'Загружаем поле...');
 
     try {
@@ -544,11 +623,13 @@ document.addEventListener('DOMContentLoaded', () => {
     } finally {
       setApiLoading(false);
       boardLocked = gameOver || !isBoardReady();
+      updateHintButtonState();
     }
   }
 
   async function refreshBoard() {
     boardLocked = true;
+    clearHintHighlight();
     setApiLoading(true, 'Обновляем поле...');
 
     try {
@@ -571,6 +652,7 @@ document.addEventListener('DOMContentLoaded', () => {
     } finally {
       setApiLoading(false);
       boardLocked = gameOver || !isBoardReady();
+      updateHintButtonState();
     }
   }
 
@@ -601,6 +683,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (boardLocked) {
       return;
     }
+
+    clearHintHighlight();
 
     if (!selectedCell) {
       setSelectedCell(cell);
@@ -651,6 +735,7 @@ document.addEventListener('DOMContentLoaded', () => {
     } finally {
       setApiLoading(false);
       boardLocked = gameOver || !isBoardReady();
+      updateHintButtonState();
     }
   }
 
@@ -686,6 +771,8 @@ document.addEventListener('DOMContentLoaded', () => {
   newGameBtn?.addEventListener('click', () => {
     startNewGame({ requireConfirmation: true });
   });
+
+  hintBtn?.addEventListener('click', showHint);
 
   gameOverNewGameBtn?.addEventListener('click', () => {
     startNewGame();

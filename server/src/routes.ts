@@ -14,6 +14,7 @@ const {
   calculateScore,
   cloneBoard,
   collectCellsToRemove,
+  findValidMove,
   generateBoard,
   hasAnyValidMove,
   removeAllTriples,
@@ -30,10 +31,12 @@ router.get("/api/health", (_req, res) => {
 })
 
 router.get("/api/board", (_req, res) => {
+  const hint = findValidMove(board)
   const response: BoardResponse = {
     board,
     score,
-    gameOver: !hasAnyValidMove(board),
+    gameOver: hint === null,
+    hint,
   }
 
   res.json(response)
@@ -42,11 +45,13 @@ router.get("/api/board", (_req, res) => {
 router.post("/api/new-game", (_req, res) => {
   board = generateBoard()
   score = 0
+  const hint = findValidMove(board)
 
   const response: BoardResponse = {
     board,
     score,
-    gameOver: !hasAnyValidMove(board),
+    gameOver: hint === null,
+    hint,
   }
 
   res.json(response)
@@ -101,11 +106,13 @@ router.post("/api/move", (req, res) => {
   const initialMatches = collectCellsToRemove(workingBoard)
 
   if (initialMatches.length === 0) {
+    const hint = findValidMove(preSwapBoard)
     const response: MoveResponse = {
       board: preSwapBoard,
       score,
-      gameOver: false,
+      gameOver: hint === null,
       reverted: true,
+      hint,
       animation: { boardAfterSwap, rounds: [] },
     }
     return res.json(response)
@@ -136,13 +143,15 @@ router.post("/api/move", (req, res) => {
 
   board = workingBoard
   score += gainedThisMove
-  const gameOver = !hasAnyValidMove(board)
+  const hint = findValidMove(board)
+  const gameOver = hint === null
 
   const response: MoveResponse = {
     board,
     score,
     gameOver,
     reverted: false,
+    hint,
     animation: { boardAfterSwap, rounds },
   }
 
