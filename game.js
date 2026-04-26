@@ -26,6 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const MATCH_CLEAR_MS = 540;
   const LAND_MS = 320;
   const CELL_CLASS_NAMES = ['cell-1', 'cell-2', 'cell-3', 'cell-4', 'cell-5'];
+  const CELL_LABELS = ['фишка 1', 'фишка 2', 'фишка 3', 'фишка 4', 'фишка 5'];
 
   const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
   const nextFrame = () => new Promise((resolve) => requestAnimationFrame(resolve));
@@ -33,6 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let board = [];
   let score = 0;
   let selectedCell = null;
+  let focusedCellPosition = { row: 0, col: 0 };
   let boardLocked = false;
   let gameOver = false;
   let pendingRetryAction = null;
@@ -63,9 +65,62 @@ document.addEventListener('DOMContentLoaded', () => {
     const row = Number(cell.getAttribute('data-row'));
     const col = Number(cell.getAttribute('data-col'));
     cells[row][col] = cell;
+    cell.setAttribute('role', 'gridcell');
+    cell.setAttribute('aria-rowindex', String(row + 1));
+    cell.setAttribute('aria-colindex', String(col + 1));
+    cell.setAttribute('aria-selected', 'false');
+    cell.setAttribute('aria-label', getCellAriaLabel(row, col, null));
+    cell.tabIndex = row === focusedCellPosition.row && col === focusedCellPosition.col ? 0 : -1;
   });
 
   const cellKey = (row, col) => `${row}:${col}`;
+
+  function getCellAriaLabel(row, col, value) {
+    const position = `Строка ${row + 1}, столбец ${col + 1}`;
+    if (value >= 1 && value <= CELL_LABELS.length) {
+      return `${position}, ${CELL_LABELS[value - 1]}`;
+    }
+    return `${position}, пустая клетка`;
+  }
+
+  function getCellPosition(cell) {
+    return {
+      row: Number(cell.getAttribute('data-row')),
+      col: Number(cell.getAttribute('data-col')),
+    };
+  }
+
+  function setFocusedCell(row, col, options = {}) {
+    const nextRow = Math.max(0, Math.min(BOARD_SIZE - 1, row));
+    const nextCol = Math.max(0, Math.min(BOARD_SIZE - 1, col));
+    focusedCellPosition = { row: nextRow, col: nextCol };
+
+    allCells.forEach((cell) => {
+      const pos = getCellPosition(cell);
+      cell.tabIndex = pos.row === nextRow && pos.col === nextCol ? 0 : -1;
+    });
+
+    if (options.focus) {
+      cells[nextRow]?.[nextCol]?.focus({ preventScroll: true });
+    }
+  }
+
+  function setSelectedCell(cell) {
+    if (selectedCell && selectedCell !== cell) {
+      selectedCell.classList.remove('selected');
+      selectedCell.setAttribute('aria-selected', 'false');
+    }
+
+    selectedCell = cell;
+    if (selectedCell) {
+      selectedCell.classList.add('selected');
+      selectedCell.setAttribute('aria-selected', 'true');
+    }
+  }
+
+  function clearSelectedCell() {
+    setSelectedCell(null);
+  }
 
   function createApiTimeoutError() {
     const error = new Error(`API request exceeded ${API_TIMEOUT_MS}ms`);
@@ -175,11 +230,6 @@ document.addEventListener('DOMContentLoaded', () => {
     cell.style.removeProperty('--swap-y');
   }
 
-  function clearSelectedCell() {
-    selectedCell?.classList.remove('selected');
-    selectedCell = null;
-  }
-
   function commitAnimatedBoard(nextBoard, movingCells) {
     boardEl.classList.add('is-swap-committing');
     renderBoard(nextBoard);
@@ -251,6 +301,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (landingCells.has(cellKey(row, col)) && value >= 1 && value <= CELL_CLASS_NAMES.length) {
           cell.classList.add('cell-land');
         }
+        if (selectedCell === cell) {
+          cell.classList.add('selected');
+        }
+        cell.setAttribute('aria-label', getCellAriaLabel(row, col, value));
+        cell.setAttribute('aria-selected', selectedCell === cell ? 'true' : 'false');
       }
     }
   }
@@ -359,6 +414,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const badge = document.createElement('div');
     badge.className = 'combo-badge';
     badge.textContent = `Combo x${n}!`;
+    badge.setAttribute('role', 'status');
+    badge.setAttribute('aria-live', 'polite');
+    badge.setAttribute('aria-atomic', 'true');
     stageEl.appendChild(badge);
     badge.addEventListener(
       'animationend',
@@ -382,6 +440,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (resetRecord) {
       currentGameHasNewRecord = false;
+      clearSelectedCell();
+      setFocusedCell(0, 0);
     }
 
     setScoreFromServer(nextScore);
@@ -532,10 +592,8 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function isAdjacent(cell1, cell2) {
-    const row1 = Number(cell1.getAttribute('data-row'));
-    const col1 = Number(cell1.getAttribute('data-col'));
-    const row2 = Number(cell2.getAttribute('data-row'));
-    const col2 = Number(cell2.getAttribute('data-col'));
+    const { row: row1, col: col1 } = getCellPosition(cell1);
+    const { row: row2, col: col2 } = getCellPosition(cell2);
     return Math.abs(row1 - row2) + Math.abs(col1 - col2) === 1;
   }
 
@@ -545,14 +603,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (!selectedCell) {
-      selectedCell = cell;
-      cell.classList.add('selected');
+      setSelectedCell(cell);
       return;
     }
 
     if (selectedCell === cell) {
-      selectedCell.classList.remove('selected');
-      selectedCell = null;
+      clearSelectedCell();
       return;
     }
 
@@ -560,18 +616,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const second = cell;
 
     if (!isAdjacent(first, second)) {
-      first.classList.remove('selected');
-      selectedCell = null;
+      clearSelectedCell();
       return;
     }
 
-    const row1 = Number(first.getAttribute('data-row'));
-    const col1 = Number(first.getAttribute('data-col'));
-    const row2 = Number(second.getAttribute('data-row'));
-    const col2 = Number(second.getAttribute('data-col'));
+    const { row: row1, col: col1 } = getCellPosition(first);
+    const { row: row2, col: col2 } = getCellPosition(second);
 
-    first.classList.remove('selected');
-    selectedCell = null;
+    clearSelectedCell();
 
     boardLocked = true;
     setApiLoading(true, 'Отправляем ход...');
@@ -602,6 +654,33 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  function moveKeyboardFocus(deltaRow, deltaCol) {
+    setFocusedCell(focusedCellPosition.row + deltaRow, focusedCellPosition.col + deltaCol, {
+      focus: true,
+    });
+  }
+
+  function handleCellKeyDown(event, cell) {
+    const keyActions = {
+      ArrowUp: [-1, 0],
+      ArrowRight: [0, 1],
+      ArrowDown: [1, 0],
+      ArrowLeft: [0, -1],
+    };
+
+    if (keyActions[event.key]) {
+      event.preventDefault();
+      const [deltaRow, deltaCol] = keyActions[event.key];
+      moveKeyboardFocus(deltaRow, deltaCol);
+      return;
+    }
+
+    if (event.key === 'Enter' || event.key === ' ' || event.key === 'Spacebar') {
+      event.preventDefault();
+      handleClick(cell);
+    }
+  }
+
   fetchBoard();
 
   newGameBtn?.addEventListener('click', () => {
@@ -624,7 +703,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
   allCells.forEach((cell) => {
     cell.addEventListener('click', () => {
+      const { row, col } = getCellPosition(cell);
+      setFocusedCell(row, col, { focus: true });
       handleClick(cell);
+    });
+    cell.addEventListener('focus', () => {
+      const { row, col } = getCellPosition(cell);
+      setFocusedCell(row, col);
+    });
+    cell.addEventListener('keydown', (event) => {
+      handleCellKeyDown(event, cell);
     });
   });
 });

@@ -12,8 +12,8 @@
     <h1 class="title">ТРИ В РЯД</h1>
 
     <div class="header-row">
-      <p class="score">Счёт: 0</p>
-      <p class="best-score">Рекорд: <span id="best-score-value">0</span></p>
+      <p class="score" aria-live="polite" aria-atomic="true">Счёт: 0</p>
+      <p class="best-score" aria-live="polite" aria-atomic="true">Рекорд: <span id="best-score-value">0</span></p>
       <button id="new-game-btn" class="btn btn--secondary" type="button">Новая игра</button>
     </div>
 
@@ -26,54 +26,54 @@
 
     <div class="stage">
       <!-- Игровое поле 6×6: сетка из клеток -->
-      <div class="board" role="grid" aria-label="Игровое поле 6 на 6">
+      <div class="board" role="grid" aria-label="Игровое поле 6 на 6" aria-rowcount="6" aria-colcount="6">
       <!-- Ряд 0 -->
-      <div class="cell" data-row="0" data-col="0"></div>
-      <div class="cell" data-row="0" data-col="1"></div>
-      <div class="cell" data-row="0" data-col="2"></div>
-      <div class="cell" data-row="0" data-col="3"></div>
-      <div class="cell" data-row="0" data-col="4"></div>
-      <div class="cell" data-row="0" data-col="5"></div>
+      <div class="cell" role="gridcell" tabindex="0" data-row="0" data-col="0" aria-rowindex="1" aria-colindex="1"></div>
+      <div class="cell" role="gridcell" tabindex="-1" data-row="0" data-col="1" aria-rowindex="1" aria-colindex="2"></div>
+      <div class="cell" role="gridcell" tabindex="-1" data-row="0" data-col="2" aria-rowindex="1" aria-colindex="3"></div>
+      <div class="cell" role="gridcell" tabindex="-1" data-row="0" data-col="3" aria-rowindex="1" aria-colindex="4"></div>
+      <div class="cell" role="gridcell" tabindex="-1" data-row="0" data-col="4" aria-rowindex="1" aria-colindex="5"></div>
+      <div class="cell" role="gridcell" tabindex="-1" data-row="0" data-col="5" aria-rowindex="1" aria-colindex="6"></div>
 
       <!-- Ряд 1 -->
-      <div class="cell" data-row="1" data-col="0"></div>
-      <div class="cell" data-row="1" data-col="1"></div>
-      <div class="cell" data-row="1" data-col="2"></div>
-      <div class="cell" data-row="1" data-col="3"></div>
-      <div class="cell" data-row="1" data-col="4"></div>
-      <div class="cell" data-row="1" data-col="5"></div>
+      <div class="cell" role="gridcell" tabindex="-1" data-row="1" data-col="0" aria-rowindex="2" aria-colindex="1"></div>
+      <div class="cell" role="gridcell" tabindex="-1" data-row="1" data-col="1" aria-rowindex="2" aria-colindex="2"></div>
+      <div class="cell" role="gridcell" tabindex="-1" data-row="1" data-col="2" aria-rowindex="2" aria-colindex="3"></div>
+      <div class="cell" role="gridcell" tabindex="-1" data-row="1" data-col="3" aria-rowindex="2" aria-colindex="4"></div>
+      <div class="cell" role="gridcell" tabindex="-1" data-row="1" data-col="4" aria-rowindex="2" aria-colindex="5"></div>
+      <div class="cell" role="gridcell" tabindex="-1" data-row="1" data-col="5" aria-rowindex="2" aria-colindex="6"></div>
 
       <!-- Ряд 2 -->
-      <div class="cell" data-row="2" data-col="0"></div>
-      <div class="cell" data-row="2" data-col="1"></div>
-      <div class="cell" data-row="2" data-col="2"></div>
-      <div class="cell" data-row="2" data-col="3"></div>
-      <div class="cell" data-row="2" data-col="4"></div>
-      <div class="cell" data-row="2" data-col="5"></div>
+      <div class="cell" role="gridcell" tabindex="-1" data-row="2" data-col="0" aria-rowindex="3" aria-colindex="1"></div>
+      <div class="cell" role="gridcell" tabindex="-1" data-row="2" data-col="1" aria-rowindex="3" aria-colindex="2"></div>
+      <div class="cell" role="gridcell" tabindex="-1" data-row="2" data-col="2" aria-rowindex="3" aria-colindex="3"></div>
+      <div class="cell" role="gridcell" tabindex="-1" data-row="2" data-col="3" aria-rowindex="3" aria-colindex="4"></div>
+      <div class="cell" role="gridcell" tabindex="-1" data-row="2" data-col="4" aria-rowindex="3" aria-colindex="5"></div>
+      <div class="cell" role="gridcell" tabindex="-1" data-row="2" data-col="5" aria-rowindex="3" aria-colindex="6"></div>
 
       <!-- Ряд 3 -->
-      <div class="cell" data-row="3" data-col="0"></div>
-      <div class="cell" data-row="3" data-col="1"></div>
-      <div class="cell" data-row="3" data-col="2"></div>
-      <div class="cell" data-row="3" data-col="3"></div>
-      <div class="cell" data-row="3" data-col="4"></div>
-      <div class="cell" data-row="3" data-col="5"></div>
+      <div class="cell" role="gridcell" tabindex="-1" data-row="3" data-col="0" aria-rowindex="4" aria-colindex="1"></div>
+      <div class="cell" role="gridcell" tabindex="-1" data-row="3" data-col="1" aria-rowindex="4" aria-colindex="2"></div>
+      <div class="cell" role="gridcell" tabindex="-1" data-row="3" data-col="2" aria-rowindex="4" aria-colindex="3"></div>
+      <div class="cell" role="gridcell" tabindex="-1" data-row="3" data-col="3" aria-rowindex="4" aria-colindex="4"></div>
+      <div class="cell" role="gridcell" tabindex="-1" data-row="3" data-col="4" aria-rowindex="4" aria-colindex="5"></div>
+      <div class="cell" role="gridcell" tabindex="-1" data-row="3" data-col="5" aria-rowindex="4" aria-colindex="6"></div>
 
       <!-- Ряд 4 -->
-      <div class="cell" data-row="4" data-col="0"></div>
-      <div class="cell" data-row="4" data-col="1"></div>
-      <div class="cell" data-row="4" data-col="2"></div>
-      <div class="cell" data-row="4" data-col="3"></div>
-      <div class="cell" data-row="4" data-col="4"></div>
-      <div class="cell" data-row="4" data-col="5"></div>
+      <div class="cell" role="gridcell" tabindex="-1" data-row="4" data-col="0" aria-rowindex="5" aria-colindex="1"></div>
+      <div class="cell" role="gridcell" tabindex="-1" data-row="4" data-col="1" aria-rowindex="5" aria-colindex="2"></div>
+      <div class="cell" role="gridcell" tabindex="-1" data-row="4" data-col="2" aria-rowindex="5" aria-colindex="3"></div>
+      <div class="cell" role="gridcell" tabindex="-1" data-row="4" data-col="3" aria-rowindex="5" aria-colindex="4"></div>
+      <div class="cell" role="gridcell" tabindex="-1" data-row="4" data-col="4" aria-rowindex="5" aria-colindex="5"></div>
+      <div class="cell" role="gridcell" tabindex="-1" data-row="4" data-col="5" aria-rowindex="5" aria-colindex="6"></div>
 
       <!-- Ряд 5 -->
-      <div class="cell" data-row="5" data-col="0"></div>
-      <div class="cell" data-row="5" data-col="1"></div>
-      <div class="cell" data-row="5" data-col="2"></div>
-      <div class="cell" data-row="5" data-col="3"></div>
-      <div class="cell" data-row="5" data-col="4"></div>
-      <div class="cell" data-row="5" data-col="5"></div>
+      <div class="cell" role="gridcell" tabindex="-1" data-row="5" data-col="0" aria-rowindex="6" aria-colindex="1"></div>
+      <div class="cell" role="gridcell" tabindex="-1" data-row="5" data-col="1" aria-rowindex="6" aria-colindex="2"></div>
+      <div class="cell" role="gridcell" tabindex="-1" data-row="5" data-col="2" aria-rowindex="6" aria-colindex="3"></div>
+      <div class="cell" role="gridcell" tabindex="-1" data-row="5" data-col="3" aria-rowindex="6" aria-colindex="4"></div>
+      <div class="cell" role="gridcell" tabindex="-1" data-row="5" data-col="4" aria-rowindex="6" aria-colindex="5"></div>
+      <div class="cell" role="gridcell" tabindex="-1" data-row="5" data-col="5" aria-rowindex="6" aria-colindex="6"></div>
       </div>
 
       <aside class="score-rules" aria-labelledby="score-rules-heading">
@@ -100,10 +100,10 @@
     </div>
 
     <p class="hint">
-      Кликните на фишку, затем на соседнюю чтобы поменять их местами
+      Кликните на фишку, затем на соседнюю, чтобы поменять их местами. С клавиатуры: стрелки — фокус, Enter/Space — выбор.
     </p>
 
-    <div id="game-over-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="game-over-title" hidden>
+    <div id="game-over-modal" class="modal" role="dialog" aria-modal="true" aria-live="assertive" aria-atomic="true" aria-labelledby="game-over-title" hidden>
       <div class="modal__panel">
         <h2 id="game-over-title" class="modal__title">Игра окончена</h2>
         <p class="modal__score">Финальный счёт: <span id="game-over-score">0</span></p>
