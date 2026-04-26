@@ -1,6 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
   const BOARD_SIZE = 6;
   const BEST_SCORE_KEY = 'tree-in-a-row:bestScore:v1';
+  const HIGH_CONTRAST_KEY = 'tree-in-a-row:highContrast:v1';
 
   function resolveApiBase() {
     const raw = window.__API_BASE__;
@@ -46,6 +47,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const boardEl = document.querySelector('.board');
   const scoreEl = document.querySelector('.score');
   const bestScoreEl = document.getElementById('best-score-value');
+  const highContrastToggle = document.getElementById('high-contrast-toggle');
   const hintBtn = document.getElementById('hint-btn');
   const newGameBtn = document.getElementById('new-game-btn');
   const apiStatusEl = document.getElementById('api-status');
@@ -60,10 +62,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const defaultGameOverTitle = gameOverTitleEl?.textContent || 'Игра окончена';
 
   let bestScore = readStoredBestScore();
+  let highContrastEnabled = readStoredHighContrast();
   let currentGameHasNewRecord = false;
   if (bestScoreEl) {
     bestScoreEl.textContent = String(bestScore);
   }
+  applyHighContrastMode(highContrastEnabled);
 
   const cells = Array.from({ length: BOARD_SIZE }, () => Array(BOARD_SIZE));
   allCells.forEach((cell) => {
@@ -397,6 +401,39 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (_err) {
       // Private browsing or blocked storage: keep the record for this session only.
     }
+  }
+
+  function readStoredHighContrast() {
+    try {
+      return localStorage.getItem(HIGH_CONTRAST_KEY) === 'true';
+    } catch (_err) {
+      return false;
+    }
+  }
+
+  function persistHighContrast(value) {
+    try {
+      localStorage.setItem(HIGH_CONTRAST_KEY, String(value));
+    } catch (_err) {
+      // Private browsing or blocked storage: keep the setting for this session only.
+    }
+  }
+
+  function applyHighContrastMode(enabled) {
+    document.body.classList.toggle('high-contrast', enabled);
+
+    if (highContrastToggle) {
+      highContrastToggle.setAttribute('aria-pressed', String(enabled));
+      highContrastToggle.textContent = enabled
+        ? 'Высокая различимость: вкл.'
+        : 'Высокая различимость: выкл.';
+    }
+  }
+
+  function toggleHighContrastMode() {
+    highContrastEnabled = !highContrastEnabled;
+    applyHighContrastMode(highContrastEnabled);
+    persistHighContrast(highContrastEnabled);
   }
 
   function updateBestScore(currentScore) {
@@ -773,6 +810,8 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   hintBtn?.addEventListener('click', showHint);
+
+  highContrastToggle?.addEventListener('click', toggleHighContrastMode);
 
   gameOverNewGameBtn?.addEventListener('click', () => {
     startNewGame();
