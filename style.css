@@ -227,6 +227,24 @@ body {
   filter: brightness(1.08);
 }
 
+.cell:focus {
+  outline: none;
+}
+
+.cell:focus-visible {
+  outline: 3px solid #ffd60a;
+  outline-offset: 4px;
+  background: rgba(39, 50, 69, 0.92);
+  box-shadow:
+    0 0 0 6px rgba(255, 214, 10, 0.14),
+    0 7px 16px rgba(0, 0, 0, 0.38),
+    inset 0 1px 0 rgba(255, 255, 255, 0.07);
+}
+
+.cell:focus-visible::before {
+  filter: brightness(1.08);
+}
+
 /* Тип 1 — красный круг */
 .cell-1::before {
   background: radial-gradient(circle at 35% 30%, #ff8a8a 0%, #e63946 45%, #b71c2c 100%);
@@ -266,6 +284,11 @@ body {
 
 .selected::before {
   filter: brightness(1.12) saturate(1.08);
+}
+
+.selected:focus-visible {
+  outline-color: #ffd60a;
+  outline-offset: 4px;
 }
 
 .cell.is-swapping {
@@ -415,6 +438,11 @@ body {
   border: 1px solid transparent;
   border-radius: 10px;
   cursor: pointer;
+}
+
+.btn:focus-visible {
+  outline: 3px solid #ffd60a;
+  outline-offset: 3px;
 }
 
 .btn--primary {
