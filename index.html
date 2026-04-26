@@ -13,6 +13,7 @@
 
     <div class="header-row">
       <p class="score" aria-live="polite" aria-atomic="true">Счёт: 0</p>
+      <p id="moves-left" class="moves" aria-live="polite" aria-atomic="true">Ходы: 0</p>
       <p class="best-score" aria-live="polite" aria-atomic="true">Рекорд: <span id="best-score-value">0</span></p>
       <button id="high-contrast-toggle" class="btn btn--secondary" type="button" aria-pressed="false">
         Высокая различимость: выкл.
@@ -111,6 +112,7 @@
       <div class="modal__panel">
         <h2 id="game-over-title" class="modal__title">Игра окончена</h2>
         <p class="modal__score">Финальный счёт: <span id="game-over-score">0</span></p>
+        <p id="game-over-reason" class="modal__reason">Ходы закончились.</p>
         <button id="game-over-new-game" class="btn btn--primary" type="button">Новая игра</button>
       </div>
     </div>

@@ -10,6 +10,8 @@ import type {
   MoveResponse,
 } from "./types"
 
+const MOVE_LIMIT = 25
+
 function createTestApp(initialState?: GameState): express.Express {
   const app = express()
   app.use(express.json())
@@ -35,6 +37,7 @@ describe("API routes", () => {
     expect(body.board).toHaveLength(6)
     expect(body.board.every((row) => row.length === 6)).toBe(true)
     expect(body.score).toBe(0)
+    expect(body.movesLeft).toBe(MOVE_LIMIT)
     expect(body.gameOver).toBe(false)
     expect(body.hint).not.toBeNull()
   })
@@ -54,6 +57,7 @@ describe("API routes", () => {
 
     expect(move.reverted).toBe(false)
     expect(move.score).toBeGreaterThan(0)
+    expect(move.movesLeft).toBe(newGame.movesLeft - 1)
     expect(move.animation.rounds.length).toBeGreaterThan(0)
   })
 
@@ -73,7 +77,11 @@ describe("API routes", () => {
       [1, 2],
       [3, 1],
     ]
-    const app = createTestApp({ board: deadBoard, score: 0 })
+    const app = createTestApp({
+      board: deadBoard,
+      score: 0,
+      movesLeft: MOVE_LIMIT,
+    })
 
     const response = await request(app)
       .post("/api/move")
@@ -83,6 +91,29 @@ describe("API routes", () => {
     expect(response.body).toEqual({
       error: "Game is over. Start a new game.",
     })
+  })
+
+  it("ends the game when the move limit is reached", async () => {
+    const board: Board = [
+      [1, 1, 2, 3, 1, 2],
+      [2, 3, 1, 2, 3, 1],
+      [3, 1, 2, 3, 1, 2],
+      [1, 2, 3, 1, 2, 3],
+      [2, 3, 1, 2, 3, 1],
+      [3, 1, 2, 3, 1, 2],
+    ]
+    const app = createTestApp({ board, score: 0, movesLeft: 1 })
+
+    const response = await request(app)
+      .post("/api/move")
+      .send({ row1: 0, col1: 2, row2: 1, col2: 2 })
+      .expect(200)
+    const move = response.body as MoveResponse
+
+    expect(move.reverted).toBe(false)
+    expect(move.movesLeft).toBe(0)
+    expect(move.gameOver).toBe(true)
+    expect(move.hint).toBeNull()
   })
 
   it("documents that one API instance shares game state between requests", async () => {

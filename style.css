@@ -68,7 +68,8 @@ body {
   margin: 0 0 1.25rem;
 }
 
-.score {
+.score,
+.moves {
   margin: 0 0 1.25rem;
   font-size: clamp(1rem, 3.5vw, 1.2rem);
   font-weight: 600;
@@ -76,8 +77,17 @@ body {
   letter-spacing: 0.02em;
 }
 
-.header-row .score {
+.header-row .score,
+.header-row .moves {
   margin: 0;
+}
+
+.moves {
+  color: #93c5fd;
+}
+
+.moves.moves--low {
+  color: #fbbf24;
 }
 
 .best-score {
@@ -607,6 +617,11 @@ body.high-contrast .cell.is-swapping::after {
 }
 
 .modal__score {
+  margin: 0 0 0.45rem;
+  color: #c5d0e6;
+}
+
+.modal__reason {
   margin: 0 0 1.25rem;
   color: #c5d0e6;
 }

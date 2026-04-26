@@ -22,6 +22,7 @@ const {
 } = game
 
 const BOARD_SIZE = 6
+const MOVE_LIMIT = 25
 
 interface CreateGameRouterOptions {
   initialState?: GameState
@@ -39,36 +40,34 @@ function createGameRouter(
     ? cloneBoard(options.initialState.board)
     : generateBoard()
   let score = options.initialState?.score ?? 0
+  let movesLeft = options.initialState?.movesLeft ?? MOVE_LIMIT
+
+  function getCurrentBoardResponse(): BoardResponse {
+    const hint = movesLeft > 0 ? findValidMove(board) : null
+
+    return {
+      board,
+      score,
+      movesLeft,
+      gameOver: movesLeft <= 0 || hint === null,
+      hint,
+    }
+  }
 
   router.get("/api/health", (_req, res) => {
     res.json({ status: "ok" })
   })
 
   router.get("/api/board", (_req, res) => {
-    const hint = findValidMove(board)
-    const response: BoardResponse = {
-      board,
-      score,
-      gameOver: hint === null,
-      hint,
-    }
-
-    res.json(response)
+    res.json(getCurrentBoardResponse())
   })
 
   router.post("/api/new-game", (_req, res) => {
     board = generateBoard()
     score = 0
-    const hint = findValidMove(board)
+    movesLeft = MOVE_LIMIT
 
-    const response: BoardResponse = {
-      board,
-      score,
-      gameOver: hint === null,
-      hint,
-    }
-
-    res.json(response)
+    res.json(getCurrentBoardResponse())
   })
 
   router.post("/api/move", (req, res) => {
@@ -106,7 +105,7 @@ function createGameRouter(
         .json({ error: `row/col must be in [0, ${BOARD_SIZE - 1}]` })
     }
 
-    if (!hasAnyValidMove(board)) {
+    if (movesLeft <= 0 || !hasAnyValidMove(board)) {
       return res.status(409).json({ error: "Game is over. Start a new game." })
     }
 
@@ -120,6 +119,7 @@ function createGameRouter(
       const response: MoveResponse = {
         board: preSwapBoard,
         score,
+        movesLeft,
         gameOver: hint === null,
         reverted: true,
         hint,
@@ -153,12 +153,14 @@ function createGameRouter(
 
     board = workingBoard
     score += gainedThisMove
-    const hint = findValidMove(board)
-    const gameOver = hint === null
+    movesLeft = Math.max(0, movesLeft - 1)
+    const hint = movesLeft > 0 ? findValidMove(board) : null
+    const gameOver = movesLeft <= 0 || hint === null
 
     const response: MoveResponse = {
       board,
       score,
+      movesLeft,
       gameOver,
       reverted: false,
       hint,
