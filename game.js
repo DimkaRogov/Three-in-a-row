@@ -18,6 +18,7 @@ document.addEventListener('DOMContentLoaded', () => {
     return '';
   }
   const API_BASE = resolveApiBase();
+  const API_TIMEOUT_MS = 60_000;
 
   const SWAP_ANIMATION_MS = 280;
   const SWAP_PAUSE_MS = 120;
@@ -36,11 +37,15 @@ document.addEventListener('DOMContentLoaded', () => {
   let focusedCellPosition = { row: 0, col: 0 };
   let boardLocked = false;
   let gameOver = false;
+  let pendingRetryAction = null;
 
   const boardEl = document.querySelector('.board');
   const scoreEl = document.querySelector('.score');
   const bestScoreEl = document.getElementById('best-score-value');
   const newGameBtn = document.getElementById('new-game-btn');
+  const apiStatusEl = document.getElementById('api-status');
+  const apiStatusMessageEl = document.getElementById('api-status-message');
+  const apiRetryBtn = document.getElementById('api-retry-btn');
   const stageEl = document.querySelector('.stage');
   const gameOverModal = document.getElementById('game-over-modal');
   const gameOverTitleEl = document.getElementById('game-over-title');
@@ -115,6 +120,100 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function clearSelectedCell() {
     setSelectedCell(null);
+  }
+
+  function createApiTimeoutError() {
+    const error = new Error(`API request exceeded ${API_TIMEOUT_MS}ms`);
+    error.name = 'ApiTimeoutError';
+    return error;
+  }
+
+  function isApiTimeoutError(error) {
+    return error instanceof Error && error.name === 'ApiTimeoutError';
+  }
+
+  async function fetchApi(path, options = {}) {
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => {
+      controller.abort();
+    }, API_TIMEOUT_MS);
+
+    try {
+      return await fetch(`${API_BASE}${path}`, {
+        ...options,
+        signal: controller.signal,
+      });
+    } catch (err) {
+      if (err?.name === 'AbortError') {
+        throw createApiTimeoutError();
+      }
+      throw err;
+    } finally {
+      window.clearTimeout(timeoutId);
+    }
+  }
+
+  function isBoardReady() {
+    return (
+      Array.isArray(board) &&
+      board.length === BOARD_SIZE &&
+      board.every((row) => Array.isArray(row) && row.length === BOARD_SIZE)
+    );
+  }
+
+  function setApiStatus(message, options = {}) {
+    const { type = 'info', retryAction = null } = options;
+    pendingRetryAction = retryAction;
+
+    if (!apiStatusEl || !apiStatusMessageEl) {
+      return;
+    }
+
+    apiStatusMessageEl.textContent = message;
+    apiStatusEl.hidden = message === '';
+    apiStatusEl.classList.toggle('api-status--error', type === 'error');
+
+    if (apiRetryBtn) {
+      apiRetryBtn.hidden = !retryAction;
+    }
+  }
+
+  function clearApiStatus() {
+    pendingRetryAction = null;
+
+    if (!apiStatusEl || !apiStatusMessageEl) {
+      return;
+    }
+
+    apiStatusMessageEl.textContent = '';
+    apiStatusEl.hidden = true;
+    apiStatusEl.classList.remove('api-status--error');
+
+    if (apiRetryBtn) {
+      apiRetryBtn.hidden = true;
+    }
+  }
+
+  function setApiLoading(isLoading, message = '') {
+    boardEl.classList.toggle('is-loading', isLoading);
+
+    if (newGameBtn) {
+      newGameBtn.disabled = isLoading;
+    }
+    if (gameOverNewGameBtn) {
+      gameOverNewGameBtn.disabled = isLoading;
+    }
+    if (apiRetryBtn) {
+      apiRetryBtn.disabled = isLoading;
+    }
+
+    if (isLoading && message) {
+      setApiStatus(message);
+    }
+  }
+
+  function showApiError(message, retryAction = null) {
+    setApiStatus(message, { type: 'error', retryAction });
   }
 
   function shouldReduceMotion() {
@@ -334,6 +433,55 @@ document.addEventListener('DOMContentLoaded', () => {
     updateBestScore(score);
   }
 
+  function applyBoardData(data, options = {}) {
+    const { resetRecord = false } = options;
+    board = data.board;
+    const nextScore = data.score ?? 0;
+
+    if (resetRecord) {
+      currentGameHasNewRecord = false;
+      clearSelectedCell();
+      setFocusedCell(0, 0);
+    }
+
+    setScoreFromServer(nextScore);
+    renderBoard(board);
+    applyGameOverState(Boolean(data.gameOver), nextScore);
+  }
+
+  function showNewGameError(error) {
+    if (API_BASE === '' && !['localhost', '127.0.0.1', ''].includes(location.hostname)) {
+      showApiError(
+        'Нет URL API. Для GitHub Pages задайте секрет BACKEND_API_BASE = адрес бэкенда на Render, затем пересоберите Pages (см. README).',
+      );
+      return;
+    }
+
+    if (isApiTimeoutError(error)) {
+      showApiError(
+        'Сервер не ответил за 60 секунд. На Render Free это бывает после простоя. Нажмите «Повторить», чтобы загрузить поле ещё раз.',
+        fetchBoard,
+      );
+      return;
+    }
+
+    showApiError(
+      'Не удалось загрузить поле. Проверьте, что бэкенд на Render запущен и CORS/URL верны: ' + API_BASE,
+    );
+  }
+
+  function showMoveError(error) {
+    if (isApiTimeoutError(error)) {
+      showApiError(
+        'Сервер не ответил за 60 секунд. Нажмите «Повторить», чтобы обновить поле с сервера.',
+        refreshBoard,
+      );
+      return;
+    }
+
+    showApiError('Ошибка хода. Проверьте сервер.');
+  }
+
   function showGameOverModal(finalScore) {
     if (!gameOverModal) {
       return;
@@ -378,37 +526,56 @@ document.addEventListener('DOMContentLoaded', () => {
 
   async function fetchBoard() {
     boardLocked = true;
+    clearSelectedCell();
+    setApiLoading(true, 'Загружаем поле...');
+
     try {
-      const response = await fetch(`${API_BASE}/api/new-game`, {
+      const response = await fetchApi('/api/new-game', {
         method: 'POST',
       });
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
       }
       const data = await response.json();
-      board = data.board;
-      const nextScore = data.score ?? 0;
-      currentGameHasNewRecord = false;
-      clearSelectedCell();
-      setFocusedCell(0, 0);
-      setScoreFromServer(nextScore);
-      renderBoard(board);
-      applyGameOverState(Boolean(data.gameOver), nextScore);
-    } catch (_err) {
-      if (API_BASE === '' && !['localhost', '127.0.0.1', ''].includes(location.hostname)) {
-        scoreEl.textContent =
-          'Нет URL API. Для GitHub Pages задайте секрет BACKEND_API_BASE = адрес бэкенда на Render, затем пересоберите Pages (см. README).';
+      applyBoardData(data, { resetRecord: true });
+      clearApiStatus();
+    } catch (err) {
+      showNewGameError(err);
+    } finally {
+      setApiLoading(false);
+      boardLocked = gameOver || !isBoardReady();
+    }
+  }
+
+  async function refreshBoard() {
+    boardLocked = true;
+    setApiLoading(true, 'Обновляем поле...');
+
+    try {
+      const response = await fetchApi('/api/board');
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      const data = await response.json();
+      applyBoardData(data);
+      clearApiStatus();
+    } catch (err) {
+      if (isApiTimeoutError(err)) {
+        showApiError(
+          'Сервер снова не ответил за 60 секунд. Нажмите «Повторить», чтобы попробовать обновить поле ещё раз.',
+          refreshBoard,
+        );
       } else {
-        scoreEl.textContent =
-          'Не удалось загрузить поле. Проверьте, что бэкенд на Render запущен и CORS/URL верны: ' + API_BASE;
+        showApiError('Не удалось обновить поле. Проверьте соединение с сервером.');
       }
     } finally {
-      boardLocked = gameOver;
+      setApiLoading(false);
+      boardLocked = gameOver || !isBoardReady();
     }
   }
 
   async function startNewGame(options = {}) {
-    if (boardLocked && !gameOver) {
+    if (boardLocked && !gameOver && isBoardReady()) {
       return;
     }
 
@@ -459,13 +626,16 @@ document.addEventListener('DOMContentLoaded', () => {
     clearSelectedCell();
 
     boardLocked = true;
+    setApiLoading(true, 'Отправляем ход...');
+
     try {
-      const response = await fetch(`${API_BASE}/api/move`, {
+      const response = await fetchApi('/api/move', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ row1, col1, row2, col2 }),
       });
       if (response.status === 409) {
+        clearApiStatus();
         applyGameOverState(true, score);
         return;
       }
@@ -473,11 +643,14 @@ document.addEventListener('DOMContentLoaded', () => {
         throw new Error(`HTTP ${response.status}`);
       }
       const data = await response.json();
+      setApiLoading(false);
+      clearApiStatus();
       await playMoveAnimation(data, { row1, col1, row2, col2 });
-    } catch (_err) {
-      scoreEl.textContent = 'Ошибка хода. Проверьте сервер.';
+    } catch (err) {
+      showMoveError(err);
     } finally {
-      boardLocked = gameOver;
+      setApiLoading(false);
+      boardLocked = gameOver || !isBoardReady();
     }
   }
 
@@ -516,6 +689,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
   gameOverNewGameBtn?.addEventListener('click', () => {
     startNewGame();
+  });
+
+  apiRetryBtn?.addEventListener('click', () => {
+    const retryAction = pendingRetryAction;
+    if (!retryAction) {
+      return;
+    }
+
+    pendingRetryAction = null;
+    void retryAction();
   });
 
   allCells.forEach((cell) => {

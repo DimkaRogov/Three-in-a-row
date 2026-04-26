@@ -17,6 +17,13 @@
       <button id="new-game-btn" class="btn btn--secondary" type="button">Новая игра</button>
     </div>
 
+    <div id="api-status" class="api-status" role="status" aria-live="polite" hidden>
+      <span id="api-status-message" class="api-status__message"></span>
+      <button id="api-retry-btn" class="btn btn--secondary api-status__retry" type="button" hidden>
+        Повторить
+      </button>
+    </div>
+
     <div class="stage">
       <!-- Игровое поле 6×6: сетка из клеток -->
       <div class="board" role="grid" aria-label="Игровое поле 6 на 6" aria-rowcount="6" aria-colcount="6">
