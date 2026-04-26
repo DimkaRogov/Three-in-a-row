@@ -25,6 +25,10 @@ const BOARD_SIZE = 6
 let board: Board = generateBoard()
 let score = 0
 
+router.get("/api/health", (_req, res) => {
+  res.json({ status: "ok" })
+})
+
 router.get("/api/board", (_req, res) => {
   const response: BoardResponse = {
     board,
