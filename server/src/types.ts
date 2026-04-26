@@ -9,9 +9,17 @@ export interface GameState {
 
 export interface BoardResponse extends GameState {
   gameOver: boolean
+  hint?: MoveHint | null
 }
 
 export interface MoveRequest {
+  row1: number
+  col1: number
+  row2: number
+  col2: number
+}
+
+export interface MoveHint {
   row1: number
   col1: number
   row2: number
@@ -30,6 +38,7 @@ export interface MoveResponse {
   score: number
   gameOver: boolean
   reverted: boolean
+  hint?: MoveHint | null
   animation: {
     boardAfterSwap: Board
     rounds: MoveAnimationRound[]

@@ -1,9 +1,11 @@
-import type { Board, Cell } from "./types"
+import type { Board, Cell, MoveHint } from "./types"
 
 const ROWS = 6
 const COLS = 6
 const CELL_TYPES: Cell[] = [1, 2, 3, 4, 5]
 const EMPTY = 0
+const MAX_BOARD_GENERATION_ATTEMPTS = 100
+const MAX_CELL_GENERATION_ATTEMPTS = 30
 
 type InternalCell = Cell | 0
 type InternalBoard = InternalCell[][]
@@ -33,10 +35,77 @@ function generateElement(): Cell {
   return picked
 }
 
-function generateBoard(): Board {
-  return Array.from({ length: ROWS }, () =>
-    Array.from({ length: COLS }, () => generateElement())
+function wouldCreateStartingMatch(
+  board: InternalBoard,
+  row: number,
+  col: number,
+  value: Cell
+): boolean {
+  const hasHorizontalMatch =
+    col >= 2 && board[row]?.[col - 1] === value && board[row]?.[col - 2] === value
+  const hasVerticalMatch =
+    row >= 2 && board[row - 1]?.[col] === value && board[row - 2]?.[col] === value
+
+  return hasHorizontalMatch || hasVerticalMatch
+}
+
+function generateBoardWithoutStartingMatches(): Board {
+  const board: InternalBoard = Array.from({ length: ROWS }, () =>
+    Array.from({ length: COLS }, () => EMPTY)
   )
+
+  for (let row = 0; row < ROWS; row += 1) {
+    const rowCells = board[row]
+    if (rowCells === undefined) {
+      continue
+    }
+
+    for (let col = 0; col < COLS; col += 1) {
+      let value = generateElement()
+
+      for (
+        let attempt = 0;
+        attempt < MAX_CELL_GENERATION_ATTEMPTS &&
+        wouldCreateStartingMatch(board, row, col, value);
+        attempt += 1
+      ) {
+        value = generateElement()
+      }
+
+      if (wouldCreateStartingMatch(board, row, col, value)) {
+        const allowedValues = CELL_TYPES.filter(
+          (cellType) => !wouldCreateStartingMatch(board, row, col, cellType)
+        )
+        value = allowedValues[0] ?? value
+      }
+
+      rowCells[col] = value
+    }
+  }
+
+  return toBoard(board)
+}
+
+function fallbackPlayableBoard(): Board {
+  return [
+    [1, 1, 2, 3, 1, 2],
+    [2, 3, 1, 2, 3, 1],
+    [3, 1, 2, 3, 1, 2],
+    [1, 2, 3, 1, 2, 3],
+    [2, 3, 1, 2, 3, 1],
+    [3, 1, 2, 3, 1, 2],
+  ]
+}
+
+function generateBoard(): Board {
+  for (let attempt = 0; attempt < MAX_BOARD_GENERATION_ATTEMPTS; attempt += 1) {
+    const board = generateBoardWithoutStartingMatches()
+    if (findAllTriples(board).length === 0 && findValidMove(board) !== null) {
+      return board
+    }
+  }
+
+  return fallbackPlayableBoard()
 }
 
 function isAdjacent(r1: number, c1: number, r2: number, c2: number): boolean {
@@ -230,7 +299,7 @@ function calculateScore(board: Board): number {
   return removedCellsCount * 10
 }
 
-function hasAnyValidMove(board: Board): boolean {
+function findValidMove(board: Board): MoveHint | null {
   const rows = board.length
   const cols = board[0]?.length ?? 0
 
@@ -241,7 +310,7 @@ function hasAnyValidMove(board: Board): boolean {
         collectCellsToRemove(swapCells(board, row, col, row, col + 1)).length >
           0
       ) {
-        return true
+        return { row1: row, col1: col, row2: row, col2: col + 1 }
       }
 
       if (
@@ -249,12 +318,16 @@ function hasAnyValidMove(board: Board): boolean {
         collectCellsToRemove(swapCells(board, row, col, row + 1, col)).length >
           0
       ) {
-        return true
+        return { row1: row, col1: col, row2: row + 1, col2: col }
       }
     }
   }
 
-  return false
+  return null
+}
+
+function hasAnyValidMove(board: Board): boolean {
+  return findValidMove(board) !== null
 }
 
 export = {
@@ -270,5 +343,6 @@ export = {
   removeAllTriples,
   addNewElements,
   calculateScore,
+  findValidMove,
   hasAnyValidMove,
 }
