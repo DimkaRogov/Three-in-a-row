@@ -29,6 +29,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const HINT_HIGHLIGHT_MS = 1600;
   const CELL_CLASS_NAMES = ['cell-1', 'cell-2', 'cell-3', 'cell-4', 'cell-5'];
   const CELL_LABELS = ['фишка 1', 'фишка 2', 'фишка 3', 'фишка 4', 'фишка 5'];
+  const ARROW_KEY_ACTIONS = {
+    ArrowUp: [-1, 0],
+    ArrowRight: [0, 1],
+    ArrowDown: [1, 0],
+    ArrowLeft: [0, -1],
+  };
 
   const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
   const nextFrame = () => new Promise((resolve) => requestAnimationFrame(resolve));
@@ -814,17 +820,49 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  function handleCellKeyDown(event, cell) {
-    const keyActions = {
-      ArrowUp: [-1, 0],
-      ArrowRight: [0, 1],
-      ArrowDown: [1, 0],
-      ArrowLeft: [0, -1],
-    };
+  function isTextInputTarget(target) {
+    return (
+      target instanceof HTMLElement &&
+      (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName))
+    );
+  }
 
-    if (keyActions[event.key]) {
+  function shouldEnterBoardFromDocument(event) {
+    if (
+      event.defaultPrevented ||
+      event.altKey ||
+      event.ctrlKey ||
+      event.metaKey ||
+      boardLocked ||
+      gameOver ||
+      !isBoardReady()
+    ) {
+      return false;
+    }
+
+    const target = event.target;
+    if (isTextInputTarget(target)) {
+      return false;
+    }
+
+    return !(target instanceof Element && target.closest('.cell'));
+  }
+
+  function handleDocumentKeyDown(event) {
+    const keyAction = ARROW_KEY_ACTIONS[event.key];
+    if (!keyAction || !shouldEnterBoardFromDocument(event)) {
+      return;
+    }
+
+    event.preventDefault();
+    const [deltaRow, deltaCol] = keyAction;
+    moveKeyboardFocus(deltaRow, deltaCol);
+  }
+
+  function handleCellKeyDown(event, cell) {
+    if (ARROW_KEY_ACTIONS[event.key]) {
       event.preventDefault();
-      const [deltaRow, deltaCol] = keyActions[event.key];
+      const [deltaRow, deltaCol] = ARROW_KEY_ACTIONS[event.key];
       moveKeyboardFocus(deltaRow, deltaCol);
       return;
     }
@@ -836,6 +874,8 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   fetchBoard();
+
+  document.addEventListener('keydown', handleDocumentKeyDown);
 
   newGameBtn?.addEventListener('click', () => {
     startNewGame({ requireConfirmation: true });
