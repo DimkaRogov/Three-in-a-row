@@ -1,4 +1,4 @@
-# Tree in a row
+# Three in a row
 
 ![CI](https://github.com/DimkaRogov/Three-in-a-row/actions/workflows/ci.yml/badge.svg)
 ![Deploy Pages](https://github.com/DimkaRogov/Three-in-a-row/actions/workflows/deploy-pages.yml/badge.svg)

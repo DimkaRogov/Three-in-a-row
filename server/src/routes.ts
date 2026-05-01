@@ -10,6 +10,7 @@ import type {
 } from "./types"
 
 const {
+  ROWS,
   addNewElements,
   calculateScore,
   cloneBoard,
@@ -21,7 +22,7 @@ const {
   swapCells,
 } = game
 
-const BOARD_SIZE = 6
+const BOARD_SIZE = ROWS
 const MOVE_LIMIT = 25
 
 interface CreateGameRouterOptions {
