@@ -20,6 +20,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   const API_BASE = resolveApiBase();
   const API_TIMEOUT_MS = 60_000;
+  const API_TIMEOUT_SECONDS = API_TIMEOUT_MS / 1000;
 
   const SWAP_ANIMATION_MS = 280;
   const SWAP_PAUSE_MS = 120;
@@ -27,6 +28,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const MATCH_CLEAR_MS = 540;
   const LAND_MS = 320;
   const HINT_HIGHLIGHT_MS = 1600;
+  const HTTP_CONFLICT = 409;
+  const LOW_MOVES_THRESHOLD = 5;
   const CELL_CLASS_NAMES = ['cell-1', 'cell-2', 'cell-3', 'cell-4', 'cell-5'];
   const CELL_LABELS = ['фишка 1', 'фишка 2', 'фишка 3', 'фишка 4', 'фишка 5'];
   const ARROW_KEY_ACTIONS = {
@@ -469,14 +472,17 @@ document.addEventListener('DOMContentLoaded', () => {
     return true;
   }
 
+  function finalizeMoveState(data) {
+    board = data.board;
+    setScoreFromServer(data.score);
+    setMovesLeftFromServer(data.movesLeft);
+    renderBoard(board);
+    applyGameOverState(Boolean(data.gameOver), data.score, data.movesLeft);
+    setHintFromServer(data.hint);
+  }
+
   async function playMoveAnimation(data, move) {
-    const {
-      board: finalBoard,
-      score: finalScore,
-      movesLeft: finalMovesLeft,
-      animation,
-      reverted,
-    } = data;
+    const { board: finalBoard, animation, reverted } = data;
     clearHintHighlight();
 
     if (!animation || !Array.isArray(animation.rounds) || animation.rounds.length === 0) {
@@ -488,12 +494,7 @@ document.addEventListener('DOMContentLoaded', () => {
         await animateSwapToBoard(animation.boardAfterSwap, move);
       }
 
-      board = finalBoard;
-      setScoreFromServer(finalScore);
-      setMovesLeftFromServer(finalMovesLeft);
-      renderBoard(board);
-      applyGameOverState(Boolean(data.gameOver), finalScore, finalMovesLeft);
-      setHintFromServer(data.hint);
+      finalizeMoveState(data);
       return;
     }
 
@@ -528,12 +529,7 @@ document.addEventListener('DOMContentLoaded', () => {
       allCells.forEach((cell) => cell.classList.remove('cell-land'));
     }
 
-    board = finalBoard;
-    setScoreFromServer(finalScore);
-    setMovesLeftFromServer(finalMovesLeft);
-    renderBoard(board);
-    applyGameOverState(Boolean(data.gameOver), finalScore, finalMovesLeft);
-    setHintFromServer(data.hint);
+    finalizeMoveState(data);
   }
 
   function showComboBadge(n) {
@@ -559,7 +555,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function setScoreFromServer(total) {
     score = total;
-    scoreEl.textContent = `Счёт: ${score}`;
+    if (scoreEl) {
+      scoreEl.textContent = `Счёт: ${score}`;
+    }
     updateBestScore(score);
   }
 
@@ -569,7 +567,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (movesLeftEl) {
       movesLeftEl.textContent = `Ходы: ${movesLeft}`;
-      movesLeftEl.classList.toggle('moves--low', movesLeft > 0 && movesLeft <= 5);
+      movesLeftEl.classList.toggle('moves--low', movesLeft > 0 && movesLeft <= LOW_MOVES_THRESHOLD);
     }
   }
 
@@ -603,7 +601,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (isApiTimeoutError(error)) {
       showApiError(
-        'Сервер не ответил за 60 секунд. На Render Free это бывает после простоя. Нажмите «Повторить», чтобы загрузить поле ещё раз.',
+        `Сервер не ответил за ${API_TIMEOUT_SECONDS} секунд. На Render Free это бывает после простоя. Нажмите «Повторить», чтобы загрузить поле ещё раз.`,
         fetchBoard,
       );
       return;
@@ -617,7 +615,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function showMoveError(error) {
     if (isApiTimeoutError(error)) {
       showApiError(
-        'Сервер не ответил за 60 секунд. Нажмите «Повторить», чтобы обновить поле с сервера.',
+        `Сервер не ответил за ${API_TIMEOUT_SECONDS} секунд. Нажмите «Повторить», чтобы обновить поле с сервера.`,
         refreshBoard,
       );
       return;
@@ -677,24 +675,24 @@ document.addEventListener('DOMContentLoaded', () => {
     updateHintButtonState();
   }
 
-  async function fetchBoard() {
+  async function requestBoard({ endpoint, method = 'GET', loadingMessage, applyOptions = {}, onError }) {
     boardLocked = true;
-    clearSelectedCell();
+    if (applyOptions.resetRecord) {
+      clearSelectedCell();
+    }
     clearHintHighlight();
-    setApiLoading(true, 'Загружаем поле...');
+    setApiLoading(true, loadingMessage);
 
     try {
-      const response = await fetchApi('/api/new-game', {
-        method: 'POST',
-      });
+      const response = await fetchApi(endpoint, { method });
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
       }
       const data = await response.json();
-      applyBoardData(data, { resetRecord: true });
+      applyBoardData(data, applyOptions);
       clearApiStatus();
     } catch (err) {
-      showNewGameError(err);
+      onError(err);
     } finally {
       setApiLoading(false);
       boardLocked = gameOver || !isBoardReady();
@@ -702,33 +700,31 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  async function refreshBoard() {
-    boardLocked = true;
-    clearHintHighlight();
-    setApiLoading(true, 'Обновляем поле...');
+  async function fetchBoard() {
+    await requestBoard({
+      endpoint: '/api/new-game',
+      method: 'POST',
+      loadingMessage: 'Загружаем поле...',
+      applyOptions: { resetRecord: true },
+      onError: showNewGameError,
+    });
+  }
 
-    try {
-      const response = await fetchApi('/api/board');
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-      const data = await response.json();
-      applyBoardData(data);
-      clearApiStatus();
-    } catch (err) {
-      if (isApiTimeoutError(err)) {
-        showApiError(
-          'Сервер снова не ответил за 60 секунд. Нажмите «Повторить», чтобы попробовать обновить поле ещё раз.',
-          refreshBoard,
-        );
-      } else {
-        showApiError('Не удалось обновить поле. Проверьте соединение с сервером.');
-      }
-    } finally {
-      setApiLoading(false);
-      boardLocked = gameOver || !isBoardReady();
-      updateHintButtonState();
-    }
+  async function refreshBoard() {
+    await requestBoard({
+      endpoint: '/api/board',
+      loadingMessage: 'Обновляем поле...',
+      onError(err) {
+        if (isApiTimeoutError(err)) {
+          showApiError(
+            `Сервер снова не ответил за ${API_TIMEOUT_SECONDS} секунд. Нажмите «Повторить», чтобы попробовать обновить поле ещё раз.`,
+            refreshBoard,
+          );
+        } else {
+          showApiError('Не удалось обновить поле. Проверьте соединение с сервером.');
+        }
+      },
+    });
   }
 
   async function startNewGame(options = {}) {
@@ -793,7 +789,7 @@ document.addEventListener('DOMContentLoaded', () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ row1, col1, row2, col2 }),
       });
-      if (response.status === 409) {
+      if (response.status === HTTP_CONFLICT) {
         clearApiStatus();
         applyGameOverState(true, score);
         return;
@@ -867,7 +863,7 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    if (event.key === 'Enter' || event.key === ' ' || event.key === 'Spacebar') {
+    if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
       handleClick(cell);
     }

@@ -335,6 +335,8 @@ function hasAnyValidMove(board: Board): boolean {
 }
 
 export = {
+  ROWS,
+  COLS,
   cloneBoard,
   generateElement,
   generateBoard,

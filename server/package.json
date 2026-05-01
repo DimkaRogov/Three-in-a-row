@@ -1,8 +1,8 @@
 {
   "name": "server",
   "version": "1.0.0",
-  "description": "Express REST API for the Tree in a row match-3 game",
-  "main": "index.js",
+  "description": "Express REST API for the Three in a row match-3 game",
+  "main": "dist/index.js",
   "scripts": {
     "dev": "ts-node src/index.ts",
     "build": "tsc",
